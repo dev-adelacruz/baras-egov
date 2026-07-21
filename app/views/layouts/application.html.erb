@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>RailsTemplate</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <%= csrf_meta_tags %>
+    <%= csp_meta_tag %>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Open+Sans:ital,wght@0,300..800;1,300..800&display=swap" rel="stylesheet">
+    <%= vite_client_tag %>
+    <%= vite_stylesheet_tag 'tailwind.css' %>
+    <%= javascript_importmap_tags %>
+  </head>
+
+  <body class="h-full">
+    <%= yield %>
+    <div id="root"></div>
+    <%= vite_javascript_tag 'application.tsx' %>
+  </body>
+</html>

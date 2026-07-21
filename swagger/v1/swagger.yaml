@@ -1,0 +1,66 @@
+---
+openapi: 3.0.1
+info:
+  title: API V1
+  version: v1
+paths:
+  "/api/v1/users":
+    post:
+      summary: registers new users
+      tags:
+      - Registrations
+      parameters: []
+      responses:
+        '200':
+          description: register new user successfully
+        '422':
+          description: registration failed because user already exists
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                password:
+                  type: string
+                password_confirmation:
+                  type: string
+  "/api/v1/users/sign_in":
+    post:
+      summary: creates new user session
+      tags:
+      - Sessions
+      parameters: []
+      responses:
+        '200':
+          description: logins new user successfully
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                password:
+                  type: string
+  "/api/v1/users/sign_out":
+    delete:
+      summary: logs out user
+      tags:
+      - Sessions
+      parameters:
+      - name: Authorization
+        in: header
+        schema:
+          type: string
+      responses:
+        '200':
+          description: logins new user successfully
+servers:
+- url: https://{defaultHost}
+  variables:
+    defaultHost:
+      default: www.example.com
