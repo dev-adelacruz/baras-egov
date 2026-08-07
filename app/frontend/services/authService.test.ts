@@ -57,3 +57,55 @@ describe('authService.validateToken', () => {
     expect(await authService.validateToken('t')).toBe(false)
   })
 })
+
+describe('authService.requestPasswordReset', () => {
+  it('POSTs the email to the password endpoint and resolves on 200', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(mockResponse({ ok: true, status: 200 }))
+    vi.stubGlobal('fetch', fetchMock)
+
+    await expect(authService.requestPasswordReset('a@b.com')).resolves.toBeUndefined()
+
+    const [url, init] = fetchMock.mock.calls[0]
+    expect(url).toBe('/api/v1/users/password')
+    expect(init.method).toBe('POST')
+    expect(JSON.parse(init.body)).toEqual({ user: { email: 'a@b.com' } })
+  })
+
+  it('throws with the server message on a non-ok response', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(mockResponse({ ok: false, status: 422, body: { status: { message: 'Bad request' } } }))
+    )
+    await expect(authService.requestPasswordReset('a@b.com')).rejects.toThrow('Bad request')
+  })
+})
+
+describe('authService.resetPassword', () => {
+  it('PUTs the token and new password in snake_case and resolves on 200', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(mockResponse({ ok: true, status: 200 }))
+    vi.stubGlobal('fetch', fetchMock)
+
+    await expect(
+      authService.resetPassword({ token: 'tok', password: 'newpass', passwordConfirmation: 'newpass' })
+    ).resolves.toBeUndefined()
+
+    const [url, init] = fetchMock.mock.calls[0]
+    expect(url).toBe('/api/v1/users/password')
+    expect(init.method).toBe('PUT')
+    expect(JSON.parse(init.body)).toEqual({
+      user: { reset_password_token: 'tok', password: 'newpass', password_confirmation: 'newpass' },
+    })
+  })
+
+  it('throws with the server message when the token is invalid', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(
+        mockResponse({ ok: false, status: 422, body: { status: { message: 'Reset password token is invalid' } } })
+      )
+    )
+    await expect(
+      authService.resetPassword({ token: 'bad', password: 'newpass', passwordConfirmation: 'newpass' })
+    ).rejects.toThrow(/token is invalid/i)
+  })
+})
