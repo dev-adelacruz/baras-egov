@@ -58,6 +58,42 @@ describe('authService.validateToken', () => {
   })
 })
 
+describe('authService.fetchMe', () => {
+  it('sends the bearer token and returns the user payload', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      mockResponse({
+        ok: true,
+        status: 200,
+        body: {
+          data: {
+            user: {
+              id: 1,
+              email: 'a@b.com',
+              role: 'admin',
+              permissions: { user_management: ['read', 'write'] },
+              data_scope: 'all',
+            },
+          },
+        },
+      })
+    )
+    vi.stubGlobal('fetch', fetchMock)
+
+    const me = await authService.fetchMe('tok123')
+
+    const [url, init] = fetchMock.mock.calls[0]
+    expect(url).toBe('/api/v1/me')
+    expect(init.headers.Authorization).toBe('Bearer tok123')
+    expect(me.role).toBe('admin')
+    expect(me.permissions.user_management).toEqual(['read', 'write'])
+  })
+
+  it('throws when the request is unauthorized', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(mockResponse({ ok: false, status: 401 })))
+    await expect(authService.fetchMe('bad')).rejects.toThrow(/status 401/i)
+  })
+})
+
 describe('authService.requestPasswordReset', () => {
   it('POSTs the email to the password endpoint and resolves on 200', async () => {
     const fetchMock = vi.fn().mockResolvedValue(mockResponse({ ok: true, status: 200 }))

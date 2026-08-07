@@ -33,6 +33,23 @@ export const logoutUser = createAsyncThunk(
   }
 );
 
+// Load the current user's role, scope and permission map from /api/v1/me.
+// Dispatched after login and on app start so role-aware UI has real data.
+export const fetchCurrentUser = createAsyncThunk(
+  'user/fetchCurrent',
+  async (_, { rejectWithValue }) => {
+    try {
+      const token = tokenStorage.getToken();
+      if (!token) {
+        return rejectWithValue('No auth token');
+      }
+      return await authService.fetchMe(token);
+    } catch (error: any) {
+      return rejectWithValue(error.message || 'Failed to load current user');
+    }
+  }
+);
+
 export const checkAuthStatus = createAsyncThunk(
   'user/checkAuth',
   async (_, { rejectWithValue }) => {
@@ -58,6 +75,8 @@ const initialState: UserState = {
   isSignedIn: false,
   token: null,
   user: null,
+  permissions: {},
+  dataScope: null,
   isLoading: false,
   error: null
 };
@@ -73,6 +92,8 @@ const userSlice = createSlice({
       state.isSignedIn = false
       state.token = null
       state.user = null
+      state.permissions = {}
+      state.dataScope = null
     },
     clearError: (state) => {
       state.error = null
@@ -105,7 +126,28 @@ const userSlice = createSlice({
       state.isSignedIn = false
       state.token = null
       state.user = null
+      state.permissions = {}
+      state.dataScope = null
       state.error = null
+    })
+
+    // Fetch current user (role + permissions + scope) cases
+    builder.addCase(fetchCurrentUser.fulfilled, (state, action) => {
+      const me = action.payload
+      state.isSignedIn = true
+      state.user = {
+        id: me.id,
+        email: me.email,
+        role: me.role,
+        office: me.office,
+        barangay: me.barangay
+      }
+      state.permissions = me.permissions ?? {}
+      state.dataScope = me.data_scope ?? null
+    })
+    builder.addCase(fetchCurrentUser.rejected, (state) => {
+      state.permissions = {}
+      state.dataScope = null
     })
     builder.addCase(logoutUser.rejected, (state, action) => {
       state.isLoading = false
