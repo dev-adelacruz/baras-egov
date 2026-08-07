@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { AppDispatch, RootState } from '../../state/store';
 import { loginUser, fetchCurrentUser, clearError } from '../../state/user/userSlice';
@@ -108,9 +109,9 @@ const LoginForm: React.FC<LoginFormProps> = ({ onSuccess }) => {
             />
             <span className="text-sm text-slate-600">Remember me</span>
           </label>
-          <button type="button" className="text-sm font-semibold text-teal-700 hover:text-teal-800 transition-colors duration-150">
+          <Link to="/forgot-password" className="text-sm font-semibold text-teal-700 hover:text-teal-800 transition-colors duration-150">
             Forgot password?
-          </button>
+          </Link>
         </div>
 
         <button

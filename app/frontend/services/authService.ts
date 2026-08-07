@@ -70,6 +70,50 @@ class AuthService {
     }
   }
 
+  // Request password-reset instructions for an email. The backend always
+  // responds 200 (enumeration-safe), so a resolved promise only means the
+  // request was accepted, not that the email exists.
+  async requestPasswordReset(email: string): Promise<void> {
+    const response = await fetch(`${this.baseURL}/users/password`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ user: { email } }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData?.status?.message || `Request failed with status ${response.status}`);
+    }
+  }
+
+  // Complete a password reset using the token emailed to the user.
+  async resetPassword(params: {
+    token: string;
+    password: string;
+    passwordConfirmation: string;
+  }): Promise<void> {
+    const response = await fetch(`${this.baseURL}/users/password`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        user: {
+          reset_password_token: params.token,
+          password: params.password,
+          password_confirmation: params.passwordConfirmation,
+        },
+      }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData?.status?.message || `Password reset failed with status ${response.status}`);
+    }
+  }
+
   async logout(): Promise<void> {
     try {
       const response = await fetch(`${this.baseURL}/users/sign_out`, {
