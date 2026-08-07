@@ -19,6 +19,18 @@ export interface ApiError {
   status?: number;
 }
 
+export type DataScope = 'all' | { barangay: string };
+
+export interface CurrentUser {
+  id: number;
+  email: string;
+  role: string;
+  office: string | null;
+  barangay: string | null;
+  permissions: Record<string, string[]>;
+  data_scope: DataScope;
+}
+
 class AuthService {
   private baseURL = '/api/v1';
 
@@ -75,6 +87,25 @@ class AuthService {
       // Even if logout fails, we should clear local auth state
       throw error;
     }
+  }
+
+  // Load the authenticated user's identity, role, scope and permission map
+  // (GET /api/v1/me). Drives role-aware rendering on the frontend.
+  async fetchMe(token: string): Promise<CurrentUser> {
+    const response = await fetch(`${this.baseURL}/me`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to load current user (status ${response.status})`);
+    }
+
+    const body = await response.json().catch(() => ({}));
+    return body?.data?.user;
   }
 
   async validateToken(token: string): Promise<boolean> {
