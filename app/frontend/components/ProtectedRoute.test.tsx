@@ -9,7 +9,7 @@ const renderGuard = (userState: Partial<{ isSignedIn: boolean; isLoading: boolea
   const store = configureStore({
     reducer: { user: userReducer },
     preloadedState: {
-      user: { isSignedIn: false, token: null, user: null, isLoading: false, error: null, ...userState },
+      user: { isSignedIn: false, token: null, user: null, permissions: {}, dataScope: null, isLoading: false, error: null, ...userState },
     },
   })
   return render(

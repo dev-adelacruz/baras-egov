@@ -1,7 +1,7 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import LoginForm from '../../components/auth/LoginForm';
-import { Zap, BarChart2, ShieldCheck, Users, Globe } from 'lucide-react';
+import { Zap, BarChart2, ShieldCheck, Users, Globe, CheckCircle2 } from 'lucide-react';
 
 const features = [
   { icon: BarChart2, label: 'Real-time analytics & reporting' },
@@ -12,6 +12,8 @@ const features = [
 
 const LoginPage: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const notice = (location.state as { notice?: string } | null)?.notice ?? null;
 
   const handleLoginSuccess = () => {
     navigate('/');
@@ -107,6 +109,12 @@ const LoginPage: React.FC = () => {
         </div>
 
         <div className="w-full max-w-sm">
+          {notice && (
+            <div className="flex items-start gap-3 px-4 py-3 mb-6 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700">
+              <CheckCircle2 className="w-4 h-4 mt-0.5 shrink-0" />
+              <p className="text-sm font-medium">{notice}</p>
+            </div>
+          )}
           <LoginForm onSuccess={handleLoginSuccess} />
 
           <p className="mt-8 text-center text-sm text-slate-500">
