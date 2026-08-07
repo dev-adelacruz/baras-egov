@@ -2,6 +2,7 @@ import React, { useRef, useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { logoutUser } from '../../state/user/userSlice';
 import { RootState } from '../../state/store';
+import { usePermissions } from '../../hooks/usePermissions';
 import {
   LayoutDashboard, User, Settings, LogOut, Bell,
   ChevronDown, Zap, TrendingUp, Users, ShoppingCart,
@@ -58,12 +59,19 @@ const performanceMetrics = [
   { label: 'Revenue Target', pct: 79 },
 ];
 
+// `module` gates a nav item behind a permission; items without one are always
+// shown. The server still enforces access independently (BRGY-38).
 const navItems = [
-  { label: 'Dashboard', icon: LayoutDashboard, active: true },
-  { label: 'Users', icon: Users, active: false },
-  { label: 'Profile', icon: User, active: false },
-  { label: 'Settings', icon: Settings, active: false },
+  { label: 'Dashboard', icon: LayoutDashboard, active: true, module: undefined },
+  { label: 'Users', icon: Users, active: false, module: 'user_management' },
+  { label: 'Profile', icon: User, active: false, module: undefined },
+  { label: 'Settings', icon: Settings, active: false, module: 'user_management' },
 ];
+
+const humanizeRole = (role: string | null): string =>
+  role
+    ? role.split('_').map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
+    : 'Staff';
 
 // ─── Sub-components ──────────────────────────────────────────────────────────
 
@@ -95,6 +103,8 @@ const StatCard: React.FC<typeof statCards[0]> = ({
 const HomePage: React.FC = () => {
   const dispatch = useDispatch();
   const user = useSelector((state: RootState) => state.user.user);
+  const { role, canAccessModule, isBarangayScoped, barangay } = usePermissions();
+  const visibleNavItems = navItems.filter((item) => !item.module || canAccessModule(item.module));
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -167,7 +177,7 @@ const HomePage: React.FC = () => {
 
         {/* Nav items */}
         <nav className="flex-1 px-3 space-y-0.5 overflow-y-auto">
-          {navItems.map(({ label, icon: Icon, active }) => (
+          {visibleNavItems.map(({ label, icon: Icon, active }) => (
             <button
               key={label}
               className={`
@@ -196,7 +206,7 @@ const HomePage: React.FC = () => {
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-xs font-semibold text-slate-300 truncate">{user?.email}</p>
-              <p className="text-[10px] text-slate-500 font-medium">Administrator</p>
+              <p className="text-[10px] text-slate-500 font-medium">{humanizeRole(role)}</p>
             </div>
             <button
               onClick={handleLogout}
@@ -225,6 +235,11 @@ const HomePage: React.FC = () => {
               <h1 className="text-sm font-bold text-slate-900 leading-tight">Dashboard</h1>
               <p className="text-[11px] text-slate-500 hidden sm:block">{today}</p>
             </div>
+            {isBarangayScoped && (
+              <span className="ml-1 inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-teal-50 border border-teal-200 text-teal-700 text-[11px] font-semibold">
+                {barangay}
+              </span>
+            )}
           </div>
 
           <div className="flex items-center gap-2">

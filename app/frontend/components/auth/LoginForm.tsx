@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { AppDispatch, RootState } from '../../state/store';
-import { loginUser, clearError } from '../../state/user/userSlice';
+import { loginUser, fetchCurrentUser, clearError } from '../../state/user/userSlice';
 import { Mail, Lock, ArrowRight, AlertCircle, Eye, EyeOff } from 'lucide-react';
 
 interface LoginFormProps {
@@ -28,6 +29,8 @@ const LoginForm: React.FC<LoginFormProps> = ({ onSuccess }) => {
     const result = await dispatch(loginUser({ email, password, rememberMe }));
 
     if (loginUser.fulfilled.match(result)) {
+      // Load role/permissions before entering the app so nav renders correctly.
+      await dispatch(fetchCurrentUser());
       onSuccess();
     } else if (loginUser.rejected.match(result)) {
       setLocalError((result.payload as string) || 'Invalid email or password.');
@@ -106,9 +109,9 @@ const LoginForm: React.FC<LoginFormProps> = ({ onSuccess }) => {
             />
             <span className="text-sm text-slate-600">Remember me</span>
           </label>
-          <button type="button" className="text-sm font-semibold text-teal-700 hover:text-teal-800 transition-colors duration-150">
+          <Link to="/forgot-password" className="text-sm font-semibold text-teal-700 hover:text-teal-800 transition-colors duration-150">
             Forgot password?
-          </button>
+          </Link>
         </div>
 
         <button
