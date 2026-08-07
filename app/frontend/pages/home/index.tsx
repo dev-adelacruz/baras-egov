@@ -1,4 +1,5 @@
 import React, { useRef, useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { logoutUser } from '../../state/user/userSlice';
 import { RootState } from '../../state/store';
@@ -62,10 +63,10 @@ const performanceMetrics = [
 // `module` gates a nav item behind a permission; items without one are always
 // shown. The server still enforces access independently (BRGY-38).
 const navItems = [
-  { label: 'Dashboard', icon: LayoutDashboard, active: true, module: undefined },
-  { label: 'Users', icon: Users, active: false, module: 'user_management' },
-  { label: 'Profile', icon: User, active: false, module: undefined },
-  { label: 'Settings', icon: Settings, active: false, module: 'user_management' },
+  { label: 'Dashboard', icon: LayoutDashboard, active: true, module: undefined, to: undefined as string | undefined },
+  { label: 'Users', icon: Users, active: false, module: 'user_management', to: '/admin/users' },
+  { label: 'Profile', icon: User, active: false, module: undefined, to: undefined },
+  { label: 'Settings', icon: Settings, active: false, module: 'user_management', to: undefined },
 ];
 
 const humanizeRole = (role: string | null): string =>
@@ -102,6 +103,7 @@ const StatCard: React.FC<typeof statCards[0]> = ({
 
 const HomePage: React.FC = () => {
   const dispatch = useDispatch();
+  const navigate = useNavigate();
   const user = useSelector((state: RootState) => state.user.user);
   const { role, canAccessModule, isBarangayScoped, barangay } = usePermissions();
   const visibleNavItems = navItems.filter((item) => !item.module || canAccessModule(item.module));
@@ -177,9 +179,10 @@ const HomePage: React.FC = () => {
 
         {/* Nav items */}
         <nav className="flex-1 px-3 space-y-0.5 overflow-y-auto">
-          {visibleNavItems.map(({ label, icon: Icon, active }) => (
+          {visibleNavItems.map(({ label, icon: Icon, active, to }) => (
             <button
               key={label}
+              onClick={() => { if (to) navigate(to); }}
               className={`
                 w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium
                 transition-colors duration-150 text-left
