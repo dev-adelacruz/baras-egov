@@ -40,4 +40,13 @@ class User < ApplicationRecord
   def data_scope
     barangay_scoped? ? { barangay: barangay } : :all
   end
+
+  # Deactivated accounts cannot authenticate (Devise hook).
+  def active_for_authentication?
+    super && active?
+  end
+
+  def inactive_message
+    active? ? super : :account_deactivated
+  end
 end

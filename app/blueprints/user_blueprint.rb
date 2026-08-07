@@ -17,4 +17,9 @@ class UserBlueprint < Blueprinter::Base
       user.data_scope
     end
   end
+
+  # View for the admin account-management API: identity, role, scope and status.
+  view :admin do
+    fields :role, :office, :barangay, :active
+  end
 end
