@@ -30,6 +30,26 @@ describe('LoginForm autofill hints', () => {
   })
 })
 
+describe('LoginForm remember-me checkbox', () => {
+  it('toggles when the label text is clicked, not just the box', async () => {
+    renderForm()
+
+    const checkbox = screen.getByRole('checkbox', { name: /remember me/i })
+    expect(checkbox).not.toBeChecked()
+
+    await userEvent.click(screen.getByText(/remember me/i))
+    expect(checkbox).toBeChecked()
+  })
+
+  // accent-color is the only property a native checkbox honours for its
+  // checked fill; without it the box renders in the OS default blue.
+  it('carries a brand accent colour rather than the OS default', () => {
+    renderForm()
+
+    expect(screen.getByRole('checkbox', { name: /remember me/i }).className).toMatch(/accent-/)
+  })
+})
+
 describe('LoginForm error announcement', () => {
   const failLogin = () =>
     vi.spyOn(authService, 'login').mockRejectedValue(new Error('Incorrect email or password.'))

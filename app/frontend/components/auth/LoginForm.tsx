@@ -123,7 +123,10 @@ const LoginForm: React.FC<LoginFormProps> = ({ onSuccess }) => {
               checked={rememberMe}
               onChange={(e) => setRememberMe(e.target.checked)}
               disabled={isLoading}
-              className="w-4 h-4 text-teal-600 bg-slate-100 border-slate-300 rounded focus:ring-teal-600 focus:ring-offset-0 cursor-pointer"
+              // accent-color is the one property a native checkbox honours for
+              // its checked fill. The previous text-/bg-/border- utilities did
+              // nothing here without @tailwindcss/forms, which is not installed.
+              className="w-4 h-4 accent-teal-700 rounded cursor-pointer focus:outline-none focus:ring-2 focus:ring-teal-600 focus:ring-offset-1"
             />
             <span className="text-sm text-slate-600">Remember me</span>
           </label>
