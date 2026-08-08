@@ -93,10 +93,15 @@ const LoginForm: React.FC<LoginFormProps> = ({ onSuccess }) => {
             <button
               type="button"
               onClick={() => setShowPassword((prev) => !prev)}
-              className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
-              tabIndex={-1}
+              aria-label={showPassword ? 'Hide password' : 'Show password'}
+              aria-pressed={showPassword}
+              className="absolute right-3.5 top-1/2 -translate-y-1/2 p-1 -m-1 rounded text-slate-400 hover:text-slate-600 focus:outline-none focus:ring-2 focus:ring-teal-600 transition-colors"
             >
-              {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              {showPassword ? (
+                <EyeOff className="w-4 h-4" aria-hidden="true" />
+              ) : (
+                <Eye className="w-4 h-4" aria-hidden="true" />
+              )}
             </button>
           </div>
         </div>
