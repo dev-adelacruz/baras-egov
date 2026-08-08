@@ -9,7 +9,10 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Open+Sans:ital,wght@0,300..800;1,300..800&display=swap" rel="stylesheet">
     <%= vite_client_tag %>
-    <%= vite_stylesheet_tag 'tailwind.css' %>
+    <%# Tailwind is imported by App.tsx, so Vite serves it through the entrypoint's
+        module graph. A vite_stylesheet_tag here resolved to
+        /vite-dev/entrypoints/tailwind.css — not an entrypoint — and 404'd on every
+        page load while the styles loaded correctly anyway. %>
     <%= javascript_importmap_tags %>
   </head>
 
