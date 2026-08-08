@@ -19,6 +19,41 @@ export interface ApiError {
   status?: number;
 }
 
+// Error carrying copy that is safe to render directly to the user. Raw HTTP
+// statuses and server-supplied strings never reach the UI — every failure is
+// translated here, at the service boundary.
+export class AuthError extends Error {
+  readonly status?: number;
+
+  constructor(message: string, status?: number) {
+    super(message);
+    this.name = 'AuthError';
+    this.status = status;
+  }
+}
+
+const NETWORK_ERROR_MESSAGE = "Can't reach the server. Check your connection and try again.";
+
+const LOGIN_ERROR_MESSAGES: Record<number, string> = {
+  // Devise answers both bad credentials and malformed params this way; the
+  // copy stays identical so neither reveals whether the email exists.
+  401: 'Incorrect email or password.',
+  422: 'Incorrect email or password.',
+  403: 'This account does not have access to the console. Contact your administrator.',
+  423: 'Account locked after too many failed attempts. Contact your administrator.',
+  429: 'Too many sign-in attempts. Wait a moment and try again.',
+};
+
+// Maps a login response status to copy a staff member can act on. Deliberately
+// ignores any message in the response body: server strings are not written for
+// end users and have leaked implementation detail in the past.
+export const loginErrorMessage = (status: number): string => {
+  const mapped = LOGIN_ERROR_MESSAGES[status];
+  if (mapped) return mapped;
+  if (status >= 500) return 'Something went wrong on our end. Try again shortly.';
+  return 'Could not sign you in. Try again, or contact your administrator.';
+};
+
 export type DataScope = 'all' | { barangay: string };
 
 export interface CurrentUser {
@@ -35,39 +70,39 @@ class AuthService {
   private baseURL = '/api/v1';
 
   async login(credentials: LoginCredentials): Promise<AuthResponse> {
+    let response: Response;
+
     try {
-      const response = await fetch(`${this.baseURL}/users/sign_in`, {
+      response = await fetch(`${this.baseURL}/users/sign_in`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ user: credentials }),
       });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || `Login failed with status ${response.status}`);
-      }
-
-      // devise-jwt returns the JWT in the Authorization response header
-      // (as "Bearer <token>"), not in the JSON body.
-      const authHeader = response.headers.get('Authorization');
-      const token = authHeader ? authHeader.replace(/^Bearer\s+/i, '') : '';
-
-      if (!token) {
-        throw new Error('Login succeeded but no auth token was returned');
-      }
-
-      const body = await response.json().catch(() => ({}));
-      const user = body?.data?.user;
-
-      return { token, user };
-    } catch (error) {
-      if (error instanceof Error) {
-        throw new Error(error.message);
-      }
-      throw new Error('An unexpected error occurred during login');
+    } catch {
+      // fetch only rejects on a transport failure — the request never reached
+      // the server, so there is no status to translate.
+      throw new AuthError(NETWORK_ERROR_MESSAGE);
     }
+
+    if (!response.ok) {
+      throw new AuthError(loginErrorMessage(response.status), response.status);
+    }
+
+    // devise-jwt returns the JWT in the Authorization response header
+    // (as "Bearer <token>"), not in the JSON body.
+    const authHeader = response.headers.get('Authorization');
+    const token = authHeader ? authHeader.replace(/^Bearer\s+/i, '') : '';
+
+    if (!token) {
+      throw new AuthError('Login succeeded but no auth token was returned');
+    }
+
+    const body = await response.json().catch(() => ({}));
+    const user = body?.data?.user;
+
+    return { token, user };
   }
 
   // Request password-reset instructions for an email. The backend always

@@ -37,12 +37,52 @@ describe('authService.login', () => {
     await expect(authService.login({ email: 'a@b.com', password: 'pw' })).rejects.toThrow(/no auth token/i)
   })
 
-  it('throws with the server message on a non-ok response', async () => {
+  // Previously this asserted the server's own message was surfaced. That is the
+  // behaviour BRGY-92 removes: the body produced "Login failed with status 401"
+  // whenever it carried no `message`, and server strings are not user copy.
+  it('ignores the server message and uses mapped copy on a non-ok response', async () => {
     vi.stubGlobal(
       'fetch',
       vi.fn().mockResolvedValue(mockResponse({ ok: false, status: 401, body: { message: 'Invalid credentials' } }))
     )
-    await expect(authService.login({ email: 'a@b.com', password: 'bad' })).rejects.toThrow('Invalid credentials')
+    await expect(authService.login({ email: 'a@b.com', password: 'bad' })).rejects.toThrow(
+      'Incorrect email or password.'
+    )
+  })
+
+  it.each([
+    [401, 'Incorrect email or password.'],
+    [422, 'Incorrect email or password.'],
+    [403, 'This account does not have access to the console. Contact your administrator.'],
+    [423, 'Account locked after too many failed attempts. Contact your administrator.'],
+    [429, 'Too many sign-in attempts. Wait a moment and try again.'],
+    [500, 'Something went wrong on our end. Try again shortly.'],
+    [503, 'Something went wrong on our end. Try again shortly.'],
+    [418, 'Could not sign you in. Try again, or contact your administrator.'],
+  ])('maps status %i to its own copy', async (status, expected) => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(mockResponse({ ok: false, status, body: {} })))
+    await expect(authService.login({ email: 'a@b.com', password: 'pw' })).rejects.toThrow(expected)
+  })
+
+  it('never leaks an HTTP status code into the message', async () => {
+    for (const status of [400, 401, 403, 418, 422, 423, 429, 500, 502, 503]) {
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue(mockResponse({ ok: false, status, body: {} })))
+      await expect(authService.login({ email: 'a@b.com', password: 'pw' })).rejects.toThrow(
+        expect.not.stringContaining(String(status))
+      )
+    }
+  })
+
+  it('reports a connection problem when fetch rejects', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('Failed to fetch')))
+    await expect(authService.login({ email: 'a@b.com', password: 'pw' })).rejects.toThrow(
+      "Can't reach the server. Check your connection and try again."
+    )
+  })
+
+  it('does not surface the underlying transport error', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('Failed to fetch')))
+    await expect(authService.login({ email: 'a@b.com', password: 'pw' })).rejects.not.toThrow(/failed to fetch/i)
   })
 })
 
