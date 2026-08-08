@@ -19,6 +19,16 @@ const renderForm = () => {
 
 afterEach(() => vi.restoreAllMocks())
 
+describe('LoginForm autofill hints', () => {
+  it('declares autocomplete tokens so password managers recognise the sign-in form', () => {
+    renderForm()
+
+    expect(screen.getByLabelText(/email address/i)).toHaveAttribute('autocomplete', 'email')
+    // current-password, not new-password — that token belongs to the reset form.
+    expect(screen.getByLabelText('Password')).toHaveAttribute('autocomplete', 'current-password')
+  })
+})
+
 describe('LoginForm password visibility toggle', () => {
   it('exposes an accessible name that reflects the current state', async () => {
     renderForm()

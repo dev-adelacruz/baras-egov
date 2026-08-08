@@ -65,6 +65,7 @@ const ResetPasswordForm: React.FC = () => {
             <input
               type={showPassword ? 'text' : 'password'}
               id="password"
+              autoComplete="new-password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
@@ -93,6 +94,7 @@ const ResetPasswordForm: React.FC = () => {
             <input
               type={showPassword ? 'text' : 'password'}
               id="passwordConfirmation"
+              autoComplete="new-password"
               value={passwordConfirmation}
               onChange={(e) => setPasswordConfirmation(e.target.value)}
               required
