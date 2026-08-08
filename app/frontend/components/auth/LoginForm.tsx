@@ -48,8 +48,12 @@ const LoginForm: React.FC<LoginFormProps> = ({ onSuccess }) => {
       </div>
 
       {displayError && (
-        <div className="flex items-start gap-3 px-4 py-3 rounded-xl bg-red-50 border border-red-200 text-red-700">
-          <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
+        <div
+          role="alert"
+          id="login-error"
+          className="flex items-start gap-3 px-4 py-3 rounded-xl bg-red-50 border border-red-200 text-red-700"
+        >
+          <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" aria-hidden="true" />
           <p className="text-sm font-medium">{displayError}</p>
         </div>
       )}
@@ -69,6 +73,8 @@ const LoginForm: React.FC<LoginFormProps> = ({ onSuccess }) => {
               onChange={(e) => setEmail(e.target.value)}
               required
               disabled={isLoading}
+              aria-invalid={displayError ? true : undefined}
+              aria-describedby={displayError ? 'login-error' : undefined}
               placeholder="you@company.com"
               className="w-full pl-10 pr-4 py-2.5 text-sm text-slate-800 bg-slate-50 border border-slate-200 rounded-xl placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-600 focus:bg-white focus:border-transparent transition-all duration-150 disabled:opacity-50"
             />
@@ -89,6 +95,8 @@ const LoginForm: React.FC<LoginFormProps> = ({ onSuccess }) => {
               onChange={(e) => setPassword(e.target.value)}
               required
               disabled={isLoading}
+              aria-invalid={displayError ? true : undefined}
+              aria-describedby={displayError ? 'login-error' : undefined}
               placeholder="••••••••"
               className="w-full pl-10 pr-10 py-2.5 text-sm text-slate-800 bg-slate-50 border border-slate-200 rounded-xl placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-600 focus:bg-white focus:border-transparent transition-all duration-150 disabled:opacity-50"
             />

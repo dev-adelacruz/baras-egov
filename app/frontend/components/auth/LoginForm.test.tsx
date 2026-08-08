@@ -5,6 +5,7 @@ import { configureStore } from '@reduxjs/toolkit'
 import { MemoryRouter } from 'react-router-dom'
 import userReducer from '../../state/user/userSlice'
 import LoginForm from './LoginForm'
+import { authService } from '../../services/authService'
 
 const renderForm = () => {
   const store = configureStore({ reducer: { user: userReducer } })
@@ -26,6 +27,47 @@ describe('LoginForm autofill hints', () => {
     expect(screen.getByLabelText(/email address/i)).toHaveAttribute('autocomplete', 'email')
     // current-password, not new-password — that token belongs to the reset form.
     expect(screen.getByLabelText('Password')).toHaveAttribute('autocomplete', 'current-password')
+  })
+})
+
+describe('LoginForm error announcement', () => {
+  const failLogin = () =>
+    vi.spyOn(authService, 'login').mockRejectedValue(new Error('Incorrect email or password.'))
+
+  const submit = async () => {
+    await userEvent.type(screen.getByLabelText(/email address/i), 'staff@baras.gov')
+    await userEvent.type(screen.getByLabelText('Password'), 'wrong')
+    await userEvent.click(screen.getByRole('button', { name: /sign in/i }))
+  }
+
+  it('exposes the failure as a live region so it is announced', async () => {
+    failLogin()
+    renderForm()
+    await submit()
+
+    const alert = await screen.findByRole('alert')
+    expect(alert).toHaveTextContent('Incorrect email or password.')
+  })
+
+  it('marks both fields invalid and points them at the message', async () => {
+    failLogin()
+    renderForm()
+    await submit()
+
+    await screen.findByRole('alert')
+
+    for (const field of [screen.getByLabelText(/email address/i), screen.getByLabelText('Password')]) {
+      expect(field).toHaveAttribute('aria-invalid', 'true')
+      expect(field).toHaveAttribute('aria-describedby', 'login-error')
+    }
+  })
+
+  it('leaves the fields unmarked before any attempt', () => {
+    renderForm()
+
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+    expect(screen.getByLabelText(/email address/i)).not.toHaveAttribute('aria-invalid')
+    expect(screen.getByLabelText('Password')).not.toHaveAttribute('aria-describedby')
   })
 })
 

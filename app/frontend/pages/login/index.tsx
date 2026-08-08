@@ -110,8 +110,13 @@ const LoginPage: React.FC = () => {
 
         <div className="w-full max-w-sm">
           {notice && (
-            <div className="flex items-start gap-3 px-4 py-3 mb-6 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700">
-              <CheckCircle2 className="w-4 h-4 mt-0.5 shrink-0" />
+            // status, not alert — a success confirmation should wait for a
+            // pause in speech rather than interrupt.
+            <div
+              role="status"
+              className="flex items-start gap-3 px-4 py-3 mb-6 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700"
+            >
+              <CheckCircle2 className="w-4 h-4 mt-0.5 shrink-0" aria-hidden="true" />
               <p className="text-sm font-medium">{notice}</p>
             </div>
           )}
