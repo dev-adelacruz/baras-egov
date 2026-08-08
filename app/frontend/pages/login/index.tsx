@@ -58,7 +58,7 @@ const LoginPage: React.FC = () => {
               <span className="w-1.5 h-1.5 rounded-full bg-teal-400 animate-pulse" />
               <span className="text-teal-300 text-xs font-semibold tracking-widest uppercase">Now with AI insights</span>
             </div>
-            <h1 className="text-[2.6rem] font-extrabold text-white leading-[1.15] tracking-tight">
+            <h1 className="text-4xl font-extrabold text-white leading-[1.15] tracking-tight">
               Everything you need,<br />
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-teal-400 via-cyan-300 to-emerald-400">
                 in one platform.
