@@ -64,6 +64,7 @@ const LoginForm: React.FC<LoginFormProps> = ({ onSuccess }) => {
             <input
               type="email"
               id="email"
+              autoComplete="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
@@ -83,6 +84,7 @@ const LoginForm: React.FC<LoginFormProps> = ({ onSuccess }) => {
             <input
               type={showPassword ? 'text' : 'password'}
               id="password"
+              autoComplete="current-password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required

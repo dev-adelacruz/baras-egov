@@ -70,6 +70,7 @@ const ForgotPasswordForm: React.FC = () => {
             <input
               type="email"
               id="email"
+              autoComplete="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
