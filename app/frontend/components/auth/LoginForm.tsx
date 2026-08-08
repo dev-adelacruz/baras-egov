@@ -33,7 +33,10 @@ const LoginForm: React.FC<LoginFormProps> = ({ onSuccess }) => {
       await dispatch(fetchCurrentUser());
       onSuccess();
     } else if (loginUser.rejected.match(result)) {
-      setLocalError((result.payload as string) || 'Invalid email or password.');
+      // authService translates every failure into user-facing copy, so the
+      // payload is rendered as-is; the guard only covers a dispatch that
+      // rejected without one.
+      setLocalError((result.payload as string) || 'Could not sign you in. Try again.');
     }
   };
 
