@@ -121,11 +121,22 @@ bin/rails s -p 3000   # terminal 1
 bin/vite dev          # terminal 2
 ```
 
-### Creating the first user
+### Seeding development users
 
-Sign-up defaults new accounts to the `municipal_staff` role. To create an
-initial **admin** (who can then manage other accounts via the app), use the
-Rails console:
+The fastest way to get accounts to log in with is the seed file — it creates one
+user per role (admin, department head, municipal staff, barangay staff, plus a
+deactivated account) and is idempotent:
+
+```bash
+bin/rails db:seed
+```
+
+All seeded accounts use the email pattern `*@baras.gov.local` and the password
+`password123` (override with the `SEED_PASSWORD` env var). The admin is
+`admin@baras.gov.local` — sign in with it and manage staff from the **Users**
+screen (`/admin/users`). Seeding only runs in development/test.
+
+To create a one-off **admin** manually instead, use the Rails console:
 
 ```bash
 bin/rails console
@@ -133,9 +144,6 @@ bin/rails console
 ```ruby
 User.create!(email: "admin@baras.gov", password: "change-me-please", role: :admin)
 ```
-
-Admins can then provision and manage staff accounts from the **Users** screen
-(`/admin/users`).
 
 ---
 
