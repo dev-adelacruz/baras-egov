@@ -20,7 +20,10 @@ const LoginPage: React.FC = () => {
   };
 
   return (
-    <div className="flex h-screen overflow-hidden">
+    // min-h-dvh, not h-screen: 100vh excludes mobile browser chrome, so the
+    // container did not shrink when the keyboard opened, and overflow-hidden
+    // removed any way to scroll to what it pushed off-screen.
+    <div className="flex min-h-dvh">
       {/* ── Left brand panel ── */}
       <div className="hidden lg:flex lg:w-[58%] relative flex-col justify-between p-12 overflow-hidden bg-gradient-to-br from-slate-950 via-teal-950 to-slate-950">
 
