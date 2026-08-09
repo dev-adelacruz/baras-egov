@@ -78,7 +78,7 @@ const ForgotPasswordForm: React.FC = () => {
           onChange={(e) => setEmail(e.target.value)}
           required
           disabled={isLoading}
-          placeholder="you@company.com"
+          placeholder="name@barangay.gov.ph"
         />
 
         <Button type="submit" isLoading={isLoading} loadingLabel="Sending..." className="mt-2">

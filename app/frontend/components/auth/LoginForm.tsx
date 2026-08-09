@@ -74,7 +74,7 @@ const LoginForm: React.FC<LoginFormProps> = ({ onSuccess }) => {
           disabled={isLoading}
           invalid={Boolean(displayError)}
           describedBy="login-error"
-          placeholder="you@company.com"
+          placeholder="name@barangay.gov.ph"
         />
 
         <Input

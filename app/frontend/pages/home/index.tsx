@@ -4,10 +4,11 @@ import { useDispatch, useSelector } from 'react-redux';
 import { logoutUser } from '../../state/user/userSlice';
 import { RootState } from '../../state/store';
 import { usePermissions } from '../../hooks/usePermissions';
+import BrandMark from '../../components/ui/BrandMark';
 import { TEXT_LINK } from '../../components/ui/linkStyles';
 import {
   LayoutDashboard, User, Settings, LogOut, Bell,
-  ChevronDown, Zap, TrendingUp, Users, ShoppingCart,
+  ChevronDown, TrendingUp, Users, ShoppingCart,
   DollarSign, ArrowUpRight, ArrowDownRight, Menu, X,
   ArrowRight, UserPlus, BarChart2, ShieldCheck, Key,
 } from 'lucide-react';
@@ -159,12 +160,7 @@ const HomePage: React.FC = () => {
       `}>
         {/* Logo */}
         <div className="h-14 flex items-center justify-between px-5 border-b border-slate-700/50 shrink-0">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-xl bg-brand-600 flex items-center justify-center shadow-lg shadow-brand-900/60">
-              <Zap className="w-4 h-4 text-white" />
-            </div>
-            <span className="text-white font-bold text-base tracking-tight">AppName</span>
-          </div>
+          <BrandMark onDark />
           <button
             onClick={() => setSidebarOpen(false)}
             className="lg:hidden p-1 text-slate-500 hover:text-slate-300 transition-colors"
