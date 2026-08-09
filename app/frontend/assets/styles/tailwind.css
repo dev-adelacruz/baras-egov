@@ -20,19 +20,40 @@
   to { width: var(--bar-width); }
 }
 
-@layer utilities {
-  .animate-gradient-shift {
-    background-size: 200% 200%;
-    animation: gradient-shift 10s ease infinite;
+/* Decorative motion only — these loop forever in peripheral vision and carry
+   no information, so they are opt-in. Functional motion (the submit spinner,
+   hover/focus transitions) is deliberately left ungated: it communicates
+   state. WCAG 2.1 2.2.2 / 2.3.3. */
+@media (prefers-reduced-motion: no-preference) {
+  @layer utilities {
+    .animate-gradient-shift {
+      background-size: 200% 200%;
+      animation: gradient-shift 10s ease infinite;
+    }
+    .animate-float {
+      animation: float 7s ease-in-out infinite;
+    }
+    .animate-float-delayed {
+      animation: float-delayed 7s ease-in-out 2.5s infinite;
+    }
+    .animate-bar-fill {
+      animation: bar-fill 1s ease-out forwards;
+    }
   }
-  .animate-float {
-    animation: float 7s ease-in-out infinite;
-  }
-  .animate-float-delayed {
-    animation: float-delayed 7s ease-in-out 2.5s infinite;
-  }
-  .animate-bar-fill {
-    animation: bar-fill 1s ease-out forwards;
+}
+
+/* animate-gradient-shift also sets the background sizing its gradient needs;
+   keep that unconditional so the element does not change appearance when
+   motion is reduced — only the movement stops. */
+.animate-gradient-shift {
+  background-size: 200% 200%;
+}
+
+/* Tailwind's built-in animate-pulse is used on the status dot. It is
+   decorative here, so it is suppressed under the same preference. */
+@media (prefers-reduced-motion: reduce) {
+  .animate-pulse {
+    animation: none;
   }
 }
 
