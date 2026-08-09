@@ -4,11 +4,12 @@ import { Mail, ArrowLeft, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { authService } from '../../services/authService';
 import Button from '../ui/Button';
 import Input from '../ui/Input';
+import { TEXT_LINK } from '../ui/linkStyles';
 
 const BackToSignIn: React.FC = () => (
   <Link
     to="/login"
-    className="inline-flex items-center gap-2 text-sm font-semibold text-brand-700 hover:text-brand-800 transition-colors"
+    className={`inline-flex items-center gap-2 text-sm ${TEXT_LINK}`}
   >
     <ArrowLeft className="w-4 h-4" aria-hidden="true" />
     Back to sign in
@@ -39,7 +40,7 @@ const ForgotPasswordForm: React.FC = () => {
   if (submitted) {
     return (
       <div className="space-y-6">
-        <div className="flex items-start gap-3 px-4 py-3 rounded-xl bg-success-50 border border-success-200 text-success-700">
+        <div className="flex items-start gap-3 px-4 py-3 rounded-xl bg-info-50 border border-info-200 text-info-700">
           <CheckCircle2 className="w-4 h-4 mt-0.5 shrink-0" aria-hidden="true" />
           <p className="text-sm font-medium">
             If that email is registered, we've sent password reset instructions. Please check your inbox.

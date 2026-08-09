@@ -11,8 +11,13 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 const VARIANTS: Record<ButtonVariant, string> = {
+  // Dark ink on the vibrant brand fill, not white. White on brand-500 is
+  // 2.80:1 and fails AA outright; dropping to brand-700 to earn white text
+  // would pass but costs the vibrancy the palette exists for. slate-900 on
+  // brand-500 scores 6.17:1 and keeps the fill exactly as bright as the seal.
+  // Hover darkens to brand-600, still 4.97:1.
   primary:
-    'text-white bg-brand-700 hover:bg-brand-800 focus:ring-brand-600 ' +
+    'text-slate-900 bg-brand-500 hover:bg-brand-600 focus:ring-brand-600 ' +
     'shadow-md shadow-brand-600/20 enabled:hover:shadow-lg enabled:hover:shadow-brand-600/30',
 };
 

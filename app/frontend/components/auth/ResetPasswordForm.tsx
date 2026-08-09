@@ -4,6 +4,7 @@ import { Lock, ArrowLeft, AlertCircle, Eye, EyeOff } from 'lucide-react';
 import { authService } from '../../services/authService';
 import Button from '../ui/Button';
 import Input from '../ui/Input';
+import { TEXT_LINK } from '../ui/linkStyles';
 
 const ResetPasswordForm: React.FC = () => {
   const navigate = useNavigate();
@@ -111,7 +112,7 @@ const ResetPasswordForm: React.FC = () => {
 
       <Link
         to="/login"
-        className="inline-flex items-center gap-2 text-sm font-semibold text-brand-700 hover:text-brand-800 transition-colors"
+        className={`inline-flex items-center gap-2 text-sm ${TEXT_LINK}`}
       >
         <ArrowLeft className="w-4 h-4" aria-hidden="true" />
         Back to sign in

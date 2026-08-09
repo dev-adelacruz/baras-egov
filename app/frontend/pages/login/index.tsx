@@ -2,6 +2,7 @@ import React from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import AuthLayout from '../../components/auth/AuthLayout';
 import LoginForm from '../../components/auth/LoginForm';
+import { TEXT_LINK } from '../../components/ui/linkStyles';
 import BrandMark from '../../components/ui/BrandMark';
 import { BarChart2, ShieldCheck, Users, Globe, CheckCircle2 } from 'lucide-react';
 
@@ -14,12 +15,14 @@ const features = [
 
 /** The wide left-hand panel. Login is the only auth page that has one. */
 const BrandPanel: React.FC = () => (
-  <div className="hidden lg:flex lg:w-[58%] relative flex-col justify-between p-12 overflow-hidden bg-gradient-to-br from-slate-950 via-brand-950 to-slate-950">
+  // Green panel, orange accents — the seal's own arrangement: the field is
+  // green, the sun and handshake on top of it are orange.
+  <div className="hidden lg:flex lg:w-[58%] relative flex-col justify-between p-12 overflow-hidden bg-gradient-to-br from-slate-950 via-accent-950 to-slate-950">
     {/* Animated orbs */}
     <div className="absolute inset-0 overflow-hidden pointer-events-none">
-      <div className="absolute -top-32 -left-32 w-[420px] h-[420px] rounded-full bg-brand-500/20 blur-3xl animate-float" />
-      <div className="absolute -bottom-32 -right-32 w-[380px] h-[380px] rounded-full bg-accent-500/15 blur-3xl animate-float-delayed" />
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[280px] h-[280px] rounded-full bg-brand-400/10 blur-3xl" />
+      <div className="absolute -top-32 -left-32 w-[420px] h-[420px] rounded-full bg-accent-500/20 blur-3xl animate-float" />
+      <div className="absolute -bottom-32 -right-32 w-[380px] h-[380px] rounded-full bg-brand-500/15 blur-3xl animate-float-delayed" />
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[280px] h-[280px] rounded-full bg-accent-400/10 blur-3xl" />
     </div>
 
     {/* Dot grid overlay */}
@@ -39,13 +42,13 @@ const BrandPanel: React.FC = () => (
     {/* Middle: hero copy */}
     <div className="relative z-10 space-y-8">
       <div className="space-y-4">
-        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brand-500/20 border border-brand-500/30">
-          <span className="w-1.5 h-1.5 rounded-full bg-brand-400 animate-pulse" />
-          <span className="text-brand-300 text-xs font-semibold tracking-widest uppercase">Now with AI insights</span>
+        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-accent-500/20 border border-accent-500/30">
+          <span className="w-1.5 h-1.5 rounded-full bg-accent-400 animate-pulse" />
+          <span className="text-accent-300 text-xs font-semibold tracking-widest uppercase">Now with AI insights</span>
         </div>
         <h1 className="text-4xl font-extrabold text-white leading-[1.15] tracking-tight">
           Everything you need,<br />
-          <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-400 via-accent-300 to-success-400">
+          <span className="text-transparent bg-clip-text bg-gradient-to-r from-accent-400 via-accent-300 to-brand-400">
             in one platform.
           </span>
         </h1>
@@ -58,7 +61,7 @@ const BrandPanel: React.FC = () => (
         {features.map(({ icon: Icon, label }) => (
           <div key={label} className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-lg bg-slate-800/60 border border-slate-700/50 flex items-center justify-center shrink-0">
-              <Icon className="w-4 h-4 text-brand-400" aria-hidden="true" />
+              <Icon className="w-4 h-4 text-accent-400" aria-hidden="true" />
             </div>
             <span className="text-slate-300 text-sm">{label}</span>
           </div>
@@ -102,7 +105,7 @@ const LoginPage: React.FC = () => {
         // pause in speech rather than interrupt.
         <div
           role="status"
-          className="flex items-start gap-3 px-4 py-3 mb-6 rounded-xl bg-success-50 border border-success-200 text-success-700"
+          className="flex items-start gap-3 px-4 py-3 mb-6 rounded-xl bg-info-50 border border-info-200 text-info-700"
         >
           <CheckCircle2 className="w-4 h-4 mt-0.5 shrink-0" aria-hidden="true" />
           <p className="text-sm font-medium">{notice}</p>
@@ -113,7 +116,7 @@ const LoginPage: React.FC = () => {
 
       <p className="mt-8 text-center text-sm text-slate-500">
         Don't have an account?{' '}
-        <button className="font-semibold text-brand-700 hover:text-brand-800 transition-colors duration-150">
+        <button className={TEXT_LINK}>
           Contact your administrator
         </button>
       </p>
