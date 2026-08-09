@@ -2,6 +2,18 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Mail, ArrowLeft, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { authService } from '../../services/authService';
+import Button from '../ui/Button';
+import Input from '../ui/Input';
+
+const BackToSignIn: React.FC = () => (
+  <Link
+    to="/login"
+    className="inline-flex items-center gap-2 text-sm font-semibold text-brand-700 hover:text-brand-800 transition-colors"
+  >
+    <ArrowLeft className="w-4 h-4" aria-hidden="true" />
+    Back to sign in
+  </Link>
+);
 
 const ForgotPasswordForm: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -27,19 +39,13 @@ const ForgotPasswordForm: React.FC = () => {
   if (submitted) {
     return (
       <div className="space-y-6">
-        <div className="flex items-start gap-3 px-4 py-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700">
-          <CheckCircle2 className="w-4 h-4 mt-0.5 shrink-0" />
+        <div className="flex items-start gap-3 px-4 py-3 rounded-xl bg-success-50 border border-success-200 text-success-700">
+          <CheckCircle2 className="w-4 h-4 mt-0.5 shrink-0" aria-hidden="true" />
           <p className="text-sm font-medium">
             If that email is registered, we've sent password reset instructions. Please check your inbox.
           </p>
         </div>
-        <Link
-          to="/login"
-          className="inline-flex items-center gap-2 text-sm font-semibold text-teal-700 hover:text-teal-800 transition-colors"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          Back to sign in
-        </Link>
+        <BackToSignIn />
       </div>
     );
   }
@@ -54,49 +60,32 @@ const ForgotPasswordForm: React.FC = () => {
       </div>
 
       {error && (
-        <div className="flex items-start gap-3 px-4 py-3 rounded-xl bg-red-50 border border-red-200 text-red-700">
-          <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
+        <div className="flex items-start gap-3 px-4 py-3 rounded-xl bg-danger-50 border border-danger-200 text-danger-700">
+          <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" aria-hidden="true" />
           <p className="text-sm font-medium">{error}</p>
         </div>
       )}
 
       <form onSubmit={handleSubmit} className="space-y-4">
-        <div className="space-y-1.5">
-          <label htmlFor="email" className="block text-xs font-semibold text-slate-600 uppercase tracking-wider">
-            Email address
-          </label>
-          <div className="relative">
-            <Mail className="absolute w-4 h-4 text-slate-400 top-1/2 -translate-y-1/2 left-3.5 pointer-events-none" />
-            <input
-              type="email"
-              id="email"
-              autoComplete="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              disabled={isLoading}
-              placeholder="you@company.com"
-              className="w-full pl-10 pr-4 py-2.5 text-sm text-slate-800 bg-slate-50 border border-slate-200 rounded-xl placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-600 focus:bg-white focus:border-transparent transition-all duration-150 disabled:opacity-50"
-            />
-          </div>
-        </div>
-
-        <button
-          type="submit"
+        <Input
+          label="Email address"
+          id="email"
+          type="email"
+          icon={Mail}
+          autoComplete="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          required
           disabled={isLoading}
-          className="flex items-center justify-center w-full px-4 py-2.5 mt-2 text-sm font-semibold text-white bg-teal-700 rounded-xl hover:bg-teal-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-teal-600 disabled:opacity-60 disabled:cursor-not-allowed transition-all duration-150 shadow-md shadow-teal-600/20 enabled:hover:shadow-lg enabled:hover:shadow-teal-600/30"
-        >
-          {isLoading ? 'Sending...' : 'Send reset instructions'}
-        </button>
+          placeholder="you@company.com"
+        />
+
+        <Button type="submit" isLoading={isLoading} loadingLabel="Sending..." className="mt-2">
+          Send reset instructions
+        </Button>
       </form>
 
-      <Link
-        to="/login"
-        className="inline-flex items-center gap-2 text-sm font-semibold text-teal-700 hover:text-teal-800 transition-colors"
-      >
-        <ArrowLeft className="w-4 h-4" />
-        Back to sign in
-      </Link>
+      <BackToSignIn />
     </div>
   );
 };

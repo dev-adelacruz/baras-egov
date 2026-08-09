@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Lock, ArrowLeft, AlertCircle, Eye, EyeOff } from 'lucide-react';
 import { authService } from '../../services/authService';
+import Button from '../ui/Button';
+import Input from '../ui/Input';
 
 const ResetPasswordForm: React.FC = () => {
   const navigate = useNavigate();
@@ -49,77 +51,69 @@ const ResetPasswordForm: React.FC = () => {
       </div>
 
       {error && (
-        <div className="flex items-start gap-3 px-4 py-3 rounded-xl bg-red-50 border border-red-200 text-red-700">
-          <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
+        <div className="flex items-start gap-3 px-4 py-3 rounded-xl bg-danger-50 border border-danger-200 text-danger-700">
+          <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" aria-hidden="true" />
           <p className="text-sm font-medium">{error}</p>
         </div>
       )}
 
       <form onSubmit={handleSubmit} className="space-y-4">
-        <div className="space-y-1.5">
-          <label htmlFor="password" className="block text-xs font-semibold text-slate-600 uppercase tracking-wider">
-            New password
-          </label>
-          <div className="relative">
-            <Lock className="absolute w-4 h-4 text-slate-400 top-1/2 -translate-y-1/2 left-3.5 pointer-events-none" />
-            <input
-              type={showPassword ? 'text' : 'password'}
-              id="password"
-              autoComplete="new-password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              minLength={6}
-              disabled={isLoading}
-              placeholder="••••••••"
-              className="w-full pl-10 pr-10 py-2.5 text-sm text-slate-800 bg-slate-50 border border-slate-200 rounded-xl placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-600 focus:bg-white focus:border-transparent transition-all duration-150 disabled:opacity-50"
-            />
+        <Input
+          label="New password"
+          id="password"
+          type={showPassword ? 'text' : 'password'}
+          icon={Lock}
+          autoComplete="new-password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          required
+          minLength={6}
+          disabled={isLoading}
+          placeholder="••••••••"
+          trailing={
+            // Same defect BRGY-93 fixed on login: tabIndex={-1} plus no
+            // accessible name made this toggle keyboard-unreachable. Corrected
+            // here rather than left behind while the surrounding lines move.
             <button
               type="button"
               onClick={() => setShowPassword((prev) => !prev)}
-              className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
-              tabIndex={-1}
+              aria-label={showPassword ? 'Hide password' : 'Show password'}
+              aria-pressed={showPassword}
+              className="absolute right-3.5 top-1/2 -translate-y-1/2 p-1 -m-1 rounded text-slate-400 hover:text-slate-600 focus:outline-none focus:ring-2 focus:ring-brand-600 transition-colors"
             >
-              {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              {showPassword ? (
+                <EyeOff className="w-4 h-4" aria-hidden="true" />
+              ) : (
+                <Eye className="w-4 h-4" aria-hidden="true" />
+              )}
             </button>
-          </div>
-        </div>
+          }
+        />
 
-        <div className="space-y-1.5">
-          <label htmlFor="passwordConfirmation" className="block text-xs font-semibold text-slate-600 uppercase tracking-wider">
-            Confirm new password
-          </label>
-          <div className="relative">
-            <Lock className="absolute w-4 h-4 text-slate-400 top-1/2 -translate-y-1/2 left-3.5 pointer-events-none" />
-            <input
-              type={showPassword ? 'text' : 'password'}
-              id="passwordConfirmation"
-              autoComplete="new-password"
-              value={passwordConfirmation}
-              onChange={(e) => setPasswordConfirmation(e.target.value)}
-              required
-              minLength={6}
-              disabled={isLoading}
-              placeholder="••••••••"
-              className="w-full pl-10 pr-4 py-2.5 text-sm text-slate-800 bg-slate-50 border border-slate-200 rounded-xl placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-600 focus:bg-white focus:border-transparent transition-all duration-150 disabled:opacity-50"
-            />
-          </div>
-        </div>
-
-        <button
-          type="submit"
+        <Input
+          label="Confirm new password"
+          id="passwordConfirmation"
+          type={showPassword ? 'text' : 'password'}
+          icon={Lock}
+          autoComplete="new-password"
+          value={passwordConfirmation}
+          onChange={(e) => setPasswordConfirmation(e.target.value)}
+          required
+          minLength={6}
           disabled={isLoading}
-          className="flex items-center justify-center w-full px-4 py-2.5 mt-2 text-sm font-semibold text-white bg-teal-700 rounded-xl hover:bg-teal-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-teal-600 disabled:opacity-60 disabled:cursor-not-allowed transition-all duration-150 shadow-md shadow-teal-600/20 enabled:hover:shadow-lg enabled:hover:shadow-teal-600/30"
-        >
-          {isLoading ? 'Resetting...' : 'Reset password'}
-        </button>
+          placeholder="••••••••"
+        />
+
+        <Button type="submit" isLoading={isLoading} loadingLabel="Resetting..." className="mt-2">
+          Reset password
+        </Button>
       </form>
 
       <Link
         to="/login"
-        className="inline-flex items-center gap-2 text-sm font-semibold text-teal-700 hover:text-teal-800 transition-colors"
+        className="inline-flex items-center gap-2 text-sm font-semibold text-brand-700 hover:text-brand-800 transition-colors"
       >
-        <ArrowLeft className="w-4 h-4" />
+        <ArrowLeft className="w-4 h-4" aria-hidden="true" />
         Back to sign in
       </Link>
     </div>
