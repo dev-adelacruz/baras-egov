@@ -72,7 +72,7 @@ const ResetPasswordForm: React.FC = () => {
               minLength={6}
               disabled={isLoading}
               placeholder="••••••••"
-              className="w-full pl-10 pr-10 py-2.5 text-sm text-slate-800 bg-slate-50 border border-slate-200 rounded-xl placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-600 focus:bg-white focus:border-transparent transition-all duration-150 disabled:opacity-50"
+              className="w-full pl-10 pr-10 py-2.5 text-sm text-slate-800 bg-slate-50 border border-slate-200 rounded-xl placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-600 focus:bg-white focus:border-transparent transition-all duration-150 disabled:opacity-50"
             />
             <button
               type="button"
@@ -101,7 +101,7 @@ const ResetPasswordForm: React.FC = () => {
               minLength={6}
               disabled={isLoading}
               placeholder="••••••••"
-              className="w-full pl-10 pr-4 py-2.5 text-sm text-slate-800 bg-slate-50 border border-slate-200 rounded-xl placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-600 focus:bg-white focus:border-transparent transition-all duration-150 disabled:opacity-50"
+              className="w-full pl-10 pr-4 py-2.5 text-sm text-slate-800 bg-slate-50 border border-slate-200 rounded-xl placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-600 focus:bg-white focus:border-transparent transition-all duration-150 disabled:opacity-50"
             />
           </div>
         </div>
