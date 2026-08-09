@@ -116,7 +116,7 @@ const AdminUsersPage: React.FC = () => {
           {canManage && (
             <button
               onClick={() => setShowCreate((v) => !v)}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-brand-700 hover:bg-brand-800 text-white text-sm font-semibold shadow-lg shadow-brand-600/30 transition-colors"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-brand-500 hover:bg-brand-600 text-slate-900 text-sm font-semibold shadow-lg shadow-brand-600/30 transition-colors"
             >
               <UserPlus className="w-4 h-4" />
               New account
@@ -160,7 +160,7 @@ const AdminUsersPage: React.FC = () => {
               value={form.barangay} onChange={(e) => setForm({ ...form, barangay: e.target.value })}
               className="px-3 py-2 text-sm border border-slate-200 rounded-lg bg-slate-50 focus:outline-none focus:ring-2 focus:ring-brand-600"
             />
-            <button type="submit" className="px-4 py-2 rounded-lg bg-brand-700 hover:bg-brand-800 text-white text-sm font-semibold transition-colors">
+            <button type="submit" className="px-4 py-2 rounded-lg bg-brand-500 hover:bg-brand-600 text-slate-900 text-sm font-semibold transition-colors">
               Create account
             </button>
           </form>
@@ -224,7 +224,7 @@ const AdminUsersPage: React.FC = () => {
                   <td className="px-4 py-3 text-slate-600">{user.barangay ?? '—'}</td>
                   <td className="px-4 py-3">
                     <span className={`inline-flex px-2 py-0.5 rounded-full text-[11px] font-semibold ${
-                      user.active ? 'bg-success-50 text-success-700' : 'bg-slate-100 text-slate-500'
+                      user.active ? 'bg-accent-50 text-accent-700' : 'bg-slate-100 text-slate-500'
                     }`}>
                       {user.active ? 'Active' : 'Deactivated'}
                     </span>

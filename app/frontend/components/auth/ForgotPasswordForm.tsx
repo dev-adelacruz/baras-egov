@@ -39,7 +39,7 @@ const ForgotPasswordForm: React.FC = () => {
   if (submitted) {
     return (
       <div className="space-y-6">
-        <div className="flex items-start gap-3 px-4 py-3 rounded-xl bg-success-50 border border-success-200 text-success-700">
+        <div className="flex items-start gap-3 px-4 py-3 rounded-xl bg-info-50 border border-info-200 text-info-700">
           <CheckCircle2 className="w-4 h-4 mt-0.5 shrink-0" aria-hidden="true" />
           <p className="text-sm font-medium">
             If that email is registered, we've sent password reset instructions. Please check your inbox.

@@ -85,7 +85,7 @@ const StatCard: React.FC<typeof statCards[0]> = ({
         <Icon className="w-5 h-5 text-brand-600" />
       </div>
       <span className={`inline-flex items-center gap-0.5 text-xs font-semibold px-2 py-1 rounded-full ${
-        up ? 'bg-success-50 text-success-700' : 'bg-danger-50 text-danger-700'
+        up ? 'bg-accent-50 text-accent-700' : 'bg-danger-50 text-danger-700'
       }`}>
         {up ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
         {change}
@@ -321,7 +321,7 @@ const HomePage: React.FC = () => {
               <p className="text-slate-400 text-sm mt-1.5 max-w-md">
                 Your platform is running smoothly. Here's a summary of today's activity.
               </p>
-              <button className="mt-4 inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-brand-700 hover:bg-brand-800 text-white text-sm font-semibold transition-all duration-150 shadow-lg shadow-brand-900/40 group">
+              <button className="mt-4 inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-brand-500 hover:bg-brand-600 text-slate-900 text-sm font-semibold transition-all duration-150 shadow-lg shadow-brand-900/40 group">
                 View full report
                 <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform duration-150" />
               </button>
