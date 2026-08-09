@@ -2,6 +2,7 @@ import React from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import AuthLayout from '../../components/auth/AuthLayout';
 import LoginForm from '../../components/auth/LoginForm';
+import { TEXT_LINK } from '../../components/ui/linkStyles';
 import BrandMark from '../../components/ui/BrandMark';
 import { BarChart2, ShieldCheck, Users, Globe, CheckCircle2 } from 'lucide-react';
 
@@ -115,7 +116,7 @@ const LoginPage: React.FC = () => {
 
       <p className="mt-8 text-center text-sm text-slate-500">
         Don't have an account?{' '}
-        <button className="font-semibold text-brand-700 hover:text-brand-800 transition-colors duration-150">
+        <button className={TEXT_LINK}>
           Contact your administrator
         </button>
       </p>

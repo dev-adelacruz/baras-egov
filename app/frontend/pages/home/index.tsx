@@ -4,6 +4,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { logoutUser } from '../../state/user/userSlice';
 import { RootState } from '../../state/store';
 import { usePermissions } from '../../hooks/usePermissions';
+import { TEXT_LINK } from '../../components/ui/linkStyles';
 import {
   LayoutDashboard, User, Settings, LogOut, Bell,
   ChevronDown, Zap, TrendingUp, Users, ShoppingCart,
@@ -342,7 +343,7 @@ const HomePage: React.FC = () => {
             <div className="lg:col-span-2 bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
               <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
                 <h3 className="text-sm font-bold text-slate-900">Recent Activity</h3>
-                <button className="flex items-center gap-1 text-xs font-semibold text-brand-700 hover:text-brand-800 transition-colors group">
+                <button className={`flex items-center gap-1 text-xs group ${TEXT_LINK}`}>
                   View all
                   <ArrowRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
                 </button>

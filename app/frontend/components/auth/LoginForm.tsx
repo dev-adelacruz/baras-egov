@@ -6,6 +6,7 @@ import { loginUser, fetchCurrentUser, clearError } from '../../state/user/userSl
 import { Mail, Lock, ArrowRight, AlertCircle, Eye, EyeOff } from 'lucide-react';
 import Button from '../ui/Button';
 import Input from '../ui/Input';
+import { TEXT_LINK } from '../ui/linkStyles';
 
 interface LoginFormProps {
   onSuccess: () => void;
@@ -120,7 +121,7 @@ const LoginForm: React.FC<LoginFormProps> = ({ onSuccess }) => {
             />
             <span className="text-sm text-slate-600">Remember me</span>
           </label>
-          <Link to="/forgot-password" className="text-sm font-semibold text-brand-700 hover:text-brand-800 transition-colors duration-150">
+          <Link to="/forgot-password" className={`text-sm ${TEXT_LINK}`}>
             Forgot password?
           </Link>
         </div>
