@@ -4,13 +4,17 @@ import AuthLayout from '../../components/auth/AuthLayout';
 import LoginForm from '../../components/auth/LoginForm';
 import { TEXT_LINK } from '../../components/ui/linkStyles';
 import BrandMark from '../../components/ui/BrandMark';
-import { BarChart2, ShieldCheck, Users, Globe, CheckCircle2 } from 'lucide-react';
+import { ShieldCheck, UserCog, KeyRound, CheckCircle2 } from 'lucide-react';
 
-const features = [
-  { icon: BarChart2, label: 'Real-time analytics & reporting' },
-  { icon: ShieldCheck, label: 'Enterprise-grade JWT security' },
-  { icon: Users, label: 'Role-based access control' },
-  { icon: Globe, label: 'Global infrastructure & 99.9% uptime' },
+// Statements about how access actually works, each verifiable in this
+// codebase — not a feature list. The panel previously advertised analytics,
+// uptime and "enterprise-grade JWT security" for a system that has none of
+// them, which is the failure this replaces. Nothing goes here that the app
+// cannot currently do.
+const accessNotes = [
+  { icon: UserCog, label: 'Accounts are issued by an administrator — there is no public sign-up' },
+  { icon: ShieldCheck, label: 'What you can see is scoped to your office and barangay' },
+  { icon: KeyRound, label: 'Forgotten passwords can be reset from this page' },
 ];
 
 /** The wide left-hand panel. Login is the only auth page that has one. */
@@ -44,46 +48,39 @@ const BrandPanel: React.FC = () => (
       <div className="space-y-4">
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-accent-500/20 border border-accent-500/30">
           <span className="w-1.5 h-1.5 rounded-full bg-accent-400 animate-pulse" />
-          <span className="text-accent-300 text-xs font-semibold tracking-widest uppercase">Now with AI insights</span>
+          <span className="text-accent-300 text-xs font-semibold tracking-widest uppercase">Authorised staff only</span>
         </div>
         <h1 className="text-4xl font-extrabold text-white leading-[1.15] tracking-tight">
-          Everything you need,<br />
+          Barangay records,<br />
           <span className="text-transparent bg-clip-text bg-gradient-to-r from-accent-400 via-accent-300 to-brand-400">
-            in one platform.
+            in one console.
           </span>
         </h1>
         <p className="text-slate-400 text-base leading-relaxed max-w-sm">
-          Manage your team, track performance, and grow your business with powerful enterprise tools.
+          The staff system for resident and account records. Sign in with the account issued to you.
         </p>
       </div>
 
       <div className="space-y-3">
-        {features.map(({ icon: Icon, label }) => (
-          <div key={label} className="flex items-center gap-3">
+        {accessNotes.map(({ icon: Icon, label }) => (
+          <div key={label} className="flex items-start gap-3">
             <div className="w-8 h-8 rounded-lg bg-slate-800/60 border border-slate-700/50 flex items-center justify-center shrink-0">
               <Icon className="w-4 h-4 text-accent-400" aria-hidden="true" />
             </div>
-            <span className="text-slate-300 text-sm">{label}</span>
+            <span className="text-slate-300 text-sm pt-1.5">{label}</span>
           </div>
         ))}
       </div>
     </div>
 
-    {/* Bottom: social proof */}
-    <div className="relative z-10 flex items-center gap-4">
-      <div className="flex -space-x-2">
-        {['#0D9488', '#8B5CF6', '#06B6D4', '#F59E0B'].map((color, i) => (
-          <div
-            key={i}
-            className="w-7 h-7 rounded-full border-2 border-slate-900 flex items-center justify-center text-[10px] font-bold text-white"
-            style={{ backgroundColor: color }}
-          >
-            {['JD', 'AM', 'CK', 'TR'][i]}
-          </div>
-        ))}
-      </div>
-      <p className="text-slate-400 text-xs">
-        Trusted by <span className="text-slate-200 font-semibold">10,000+</span> teams worldwide
+    {/* Bottom: standing advisory. Replaces a fabricated adoption figure and
+        four invented coworker avatars — neither of which this system has any
+        basis for, and both of which are a credibility problem on a government
+        login page rather than a copy nit. */}
+    <div className="relative z-10">
+      <p className="text-slate-400 text-xs leading-relaxed max-w-sm">
+        Accounts are personal and must not be shared. Report a lost or compromised account to your
+        administrator immediately.
       </p>
     </div>
   </div>
