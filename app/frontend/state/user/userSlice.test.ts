@@ -17,7 +17,7 @@ const initial = {
   permissions: {},
   dataScope: null,
   isLoading: false,
-  error: null,
+  error: null, errorKind: null,
 }
 
 describe('userSlice reducer', () => {
