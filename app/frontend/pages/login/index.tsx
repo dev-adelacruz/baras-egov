@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import AuthLayout from '../../components/auth/AuthLayout';
 import LoginForm from '../../components/auth/LoginForm';
 import { TEXT_LINK } from '../../components/ui/linkStyles';
+import { supportMailto } from '../../config/support';
 import BrandMark from '../../components/ui/BrandMark';
 import { ShieldCheck, UserCog, KeyRound, CheckCircle2 } from 'lucide-react';
 
@@ -111,11 +112,22 @@ const LoginPage: React.FC = () => {
 
       <LoginForm onSuccess={handleLoginSuccess} />
 
+      {/* "Don't have an account?" was the wrong question — there is no public
+          sign-up, so everyone reading this has one. And the control below it
+          was a <button> with no handler: focusable, announced as actionable,
+          and inert. With no support contact configured this is plain text, so
+          nothing enters the tab order that cannot be acted on. */}
       <p className="mt-8 text-center text-sm text-slate-500">
-        Don't have an account?{' '}
-        <button className={TEXT_LINK}>
-          Contact your administrator
-        </button>
+        Trouble signing in?{' '}
+        {supportMailto() ? (
+          <a href={supportMailto() as string} className={TEXT_LINK}>
+            Contact your administrator
+          </a>
+        ) : (
+          <span className="font-semibold text-slate-700">
+            Your barangay administrator issues and resets accounts.
+          </span>
+        )}
       </p>
     </AuthLayout>
   );
