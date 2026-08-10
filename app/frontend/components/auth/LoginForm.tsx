@@ -3,30 +3,53 @@ import { Link } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { AppDispatch, RootState } from '../../state/store';
 import { loginUser, fetchCurrentUser, clearError } from '../../state/user/userSlice';
-import { Mail, Lock, ArrowRight, AlertCircle, Eye, EyeOff } from 'lucide-react';
+import { Mail, Lock, ArrowRight, AlertCircle, AlertTriangle, Eye, EyeOff } from 'lucide-react';
 import Button from '../ui/Button';
 import Input from '../ui/Input';
 import { TEXT_LINK } from '../ui/linkStyles';
+import type { LoginFailureKind } from '../../services/authService';
 
 interface LoginFormProps {
   onSuccess: () => void;
 }
 
+/**
+ * Not every sign-in failure is the same kind of problem, and they should not
+ * look the same.
+ *
+ * `last-attempt` is a warning about a consequence that has not happened yet —
+ * it is the last moment the user can avoid an hour locked out, so it must read
+ * as an escalation rather than as the same red box they just dismissed.
+ * `locked` is a state they cannot fix by retyping, so it gets the padlock
+ * rather than the generic alert glyph.
+ */
+const errorBanner = (kind: LoginFailureKind | null) => {
+  if (kind === 'last-attempt') {
+    return {
+      className: 'bg-warning-50 border-warning-200 text-warning-800',
+      Icon: AlertTriangle,
+    };
+  }
+  return {
+    className: 'bg-danger-50 border-danger-200 text-danger-700',
+    Icon: kind === 'locked' ? Lock : AlertCircle,
+  };
+};
+
 const LoginForm: React.FC<LoginFormProps> = ({ onSuccess }) => {
   const dispatch = useDispatch<AppDispatch>();
-  const { isLoading, error } = useSelector((state: RootState) => state.user);
+  const { isLoading, error, errorKind } = useSelector((state: RootState) => state.user);
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [localError, setLocalError] = useState<string | null>(null);
 
-  const displayError = localError || error;
+  const displayError = error;
+  const banner = errorBanner(errorKind);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLocalError(null);
     dispatch(clearError());
 
     const result = await dispatch(loginUser({ email, password, rememberMe }));
@@ -35,12 +58,9 @@ const LoginForm: React.FC<LoginFormProps> = ({ onSuccess }) => {
       // Load role/permissions before entering the app so nav renders correctly.
       await dispatch(fetchCurrentUser());
       onSuccess();
-    } else if (loginUser.rejected.match(result)) {
-      // authService translates every failure into user-facing copy, so the
-      // payload is rendered as-is; the guard only covers a dispatch that
-      // rejected without one.
-      setLocalError((result.payload as string) || 'Could not sign you in. Try again.');
     }
+    // On rejection the slice records both the copy and the failure kind, so
+    // there is no second source of truth to keep in step here.
   };
 
   return (
@@ -54,9 +74,9 @@ const LoginForm: React.FC<LoginFormProps> = ({ onSuccess }) => {
         <div
           role="alert"
           id="login-error"
-          className="flex items-start gap-3 px-4 py-3 rounded-xl bg-danger-50 border border-danger-200 text-danger-700"
+          className={`flex items-start gap-3 px-4 py-3 rounded-xl border ${banner.className}`}
         >
-          <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" aria-hidden="true" />
+          <banner.Icon className="w-4 h-4 mt-0.5 shrink-0" aria-hidden="true" />
           <p className="text-sm font-medium">{displayError}</p>
         </div>
       )}

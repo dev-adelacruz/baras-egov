@@ -1,5 +1,6 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import { authService } from '../../services/authService';
+import type { LoginFailureKind } from '../../services/authService';
 import { tokenStorage } from '../../services/tokenStorage';
 
 // Async thunks for authentication
@@ -14,7 +15,13 @@ export const loginUser = createAsyncThunk(
       tokenStorage.storeToken(response.token, { storageType: rememberMe ? 'local' : 'session' });
       return response;
     } catch (error: any) {
-      return rejectWithValue(error.message || 'Login failed');
+      // Carry the failure kind alongside the copy: a locked account and a
+      // wrong password both arrive as 401, and the UI presents them
+      // differently (BRGY-106).
+      return rejectWithValue({
+        message: error?.message || 'Login failed',
+        kind: error?.kind ?? 'unknown',
+      });
     }
   }
 );
@@ -78,7 +85,8 @@ const initialState: UserState = {
   permissions: {},
   dataScope: null,
   isLoading: false,
-  error: null
+  error: null,
+  errorKind: null
 };
 
 const userSlice = createSlice({
@@ -97,6 +105,7 @@ const userSlice = createSlice({
     },
     clearError: (state) => {
       state.error = null
+      state.errorKind = null
     }
   },
   extraReducers: (builder) => {
@@ -114,7 +123,16 @@ const userSlice = createSlice({
     })
     builder.addCase(loginUser.rejected, (state, action) => {
       state.isLoading = false
-      state.error = action.payload as string
+      // Tolerates a bare string: rejectWithValue now sends an object, but an
+      // unhandled throw in the thunk leaves payload undefined entirely.
+      const payload = action.payload as { message?: string; kind?: LoginFailureKind } | string | undefined
+      if (typeof payload === 'string') {
+        state.error = payload
+        state.errorKind = null
+      } else {
+        state.error = payload?.message ?? 'Login failed'
+        state.errorKind = payload?.kind ?? null
+      }
     })
 
     // Logout cases

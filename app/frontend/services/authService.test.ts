@@ -6,12 +6,15 @@ const mockResponse = (opts: {
   status?: number
   authHeader?: string | null
   body?: unknown
+  text?: string
 }) =>
   ({
     ok: opts.ok ?? true,
     status: opts.status ?? 200,
     headers: { get: (k: string) => (k === 'Authorization' ? opts.authHeader ?? null : null) },
     json: async () => opts.body ?? {},
+    // Devise sends plain text on a failed sign-in, not JSON.
+    text: async () => opts.text ?? '',
   }) as unknown as Response
 
 afterEach(() => vi.restoreAllMocks())
@@ -54,7 +57,6 @@ describe('authService.login', () => {
     [401, 'Incorrect email or password.'],
     [422, 'Incorrect email or password.'],
     [403, 'This account does not have access to the console. Contact your administrator.'],
-    [423, 'Account locked after too many failed attempts. Contact your administrator.'],
     [429, 'Too many sign-in attempts. Wait a moment and try again.'],
     [500, 'Something went wrong on our end. Try again shortly.'],
     [503, 'Something went wrong on our end. Try again shortly.'],
@@ -64,8 +66,47 @@ describe('authService.login', () => {
     await expect(authService.login({ email: 'a@b.com', password: 'pw' })).rejects.toThrow(expected)
   })
 
+  // Devise answers 401 for all three of these. Status alone cannot tell them
+  // apart, which is why the previous 423 mapping could never fire — verified
+  // against the running API in BRGY-106.
+  it.each([
+    ['Invalid email or password.', 'invalid', 'Incorrect email or password.'],
+    [
+      'You have one more attempt before your account is locked.',
+      'last-attempt',
+      'One more failed attempt will lock this account.',
+    ],
+    ['Your account is locked.', 'locked', 'This account is locked'],
+  ])('reads the 401 body %j as %s', async (body, kind, expected) => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(mockResponse({ ok: false, status: 401, text: body })))
+    await expect(authService.login({ email: 'a@b.com', password: 'pw' })).rejects.toMatchObject({
+      kind,
+      message: expect.stringContaining(expected),
+    })
+  })
+
+  it('falls back to the generic message when the body is unrecognised', async () => {
+    // If the API is ever localised these patterns stop matching. Failing to
+    // 'invalid' is the safe direction — a generic message, never a wrong one.
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(mockResponse({ ok: false, status: 401, text: 'Mali ang email o password.' }))
+    )
+    await expect(authService.login({ email: 'a@b.com', password: 'pw' })).rejects.toMatchObject({
+      kind: 'invalid',
+      message: 'Incorrect email or password.',
+    })
+  })
+
+  it('tags a transport failure as a network problem', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('Failed to fetch')))
+    await expect(authService.login({ email: 'a@b.com', password: 'pw' })).rejects.toMatchObject({
+      kind: 'network',
+    })
+  })
+
   it('never leaks an HTTP status code into the message', async () => {
-    for (const status of [400, 401, 403, 418, 422, 423, 429, 500, 502, 503]) {
+    for (const status of [400, 401, 403, 418, 422, 429, 500, 502, 503]) {
       vi.stubGlobal('fetch', vi.fn().mockResolvedValue(mockResponse({ ok: false, status, body: {} })))
       await expect(authService.login({ email: 'a@b.com', password: 'pw' })).rejects.toThrow(
         expect.not.stringContaining(String(status))

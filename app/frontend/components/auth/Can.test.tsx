@@ -18,7 +18,7 @@ const renderWithPermissions = (
         permissions,
         dataScope: 'all' as const,
         isLoading: false,
-        error: null,
+        error: null, errorKind: null,
       },
     },
   })
