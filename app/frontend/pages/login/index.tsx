@@ -26,7 +26,14 @@ const BrandPanel: React.FC = () => (
   // extrabold headline; the form is small, white and quiet. Giving the backdrop
   // the larger half as well made it win the squint test outright, which inverts
   // what this screen is for — the panel is context, signing in is the task.
-  <div className="hidden lg:flex lg:w-1/2 relative flex-col justify-between p-12 overflow-hidden bg-gradient-to-br from-slate-950 via-accent-950 to-slate-950">
+  //
+  // `items-center` bounds the content into a centred column instead of pinning
+  // it to the left edge. Left-anchored, the copy stopped at a fixed x and the
+  // panel kept growing past it, so the leftover ran to 44% of the panel at
+  // 1920px — that reads as content that failed to fill its container, not as
+  // whitespace anyone chose. Centred, the same leftover becomes a symmetric
+  // margin, and line length stays bounded instead of tracking the viewport.
+  <div className="hidden lg:flex lg:w-1/2 relative flex-col justify-between items-center p-12 overflow-hidden bg-gradient-to-br from-slate-950 via-accent-950 to-slate-950">
     {/* Animated orbs */}
     <div className="absolute inset-0 overflow-hidden pointer-events-none">
       <div className="absolute -top-32 -left-32 w-[420px] h-[420px] rounded-full bg-accent-500/20 blur-3xl animate-float" />
@@ -44,12 +51,14 @@ const BrandPanel: React.FC = () => (
     />
 
     {/* Top: logo */}
-    <div className="relative z-10">
+    {/* The three blocks share one 512px measure so they align to a common left
+        edge — without it, centring each block independently would stagger them. */}
+    <div className="relative z-10 w-full max-w-lg">
       <BrandMark size="md" onDark />
     </div>
 
     {/* Middle: hero copy */}
-    <div className="relative z-10 space-y-8">
+    <div className="relative z-10 w-full max-w-lg space-y-8">
       <div className="space-y-4">
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-accent-500/20 border border-accent-500/30">
           <span className="w-1.5 h-1.5 rounded-full bg-accent-400 animate-pulse" />
@@ -61,7 +70,9 @@ const BrandPanel: React.FC = () => (
             in one console.
           </span>
         </h1>
-        <p className="text-slate-400 text-base leading-relaxed max-w-sm">
+        {/* No cap of its own — it fills the 512px column, which at 16px is
+            about 64 characters, inside the 45–75 comfortable range. */}
+        <p className="text-slate-400 text-base leading-relaxed">
           The staff system for resident and account records. Sign in with the account issued to you.
         </p>
       </div>
@@ -82,8 +93,10 @@ const BrandPanel: React.FC = () => (
         four invented coworker avatars — neither of which this system has any
         basis for, and both of which are a credibility problem on a government
         login page rather than a copy nit. */}
-    <div className="relative z-10">
-      <p className="text-slate-400 text-xs leading-relaxed max-w-sm">
+    <div className="relative z-10 w-full max-w-lg">
+      {/* Held to 448px rather than the full column: at 12px the full 512px
+          would run past 90 characters a line. */}
+      <p className="text-slate-400 text-xs leading-relaxed max-w-md">
         Accounts are personal and must not be shared. Report a lost or compromised account to your
         administrator immediately.
       </p>
