@@ -3,39 +3,32 @@ import { Provider } from 'react-redux'
 import { configureStore } from '@reduxjs/toolkit'
 import { MemoryRouter } from 'react-router-dom'
 import userReducer from '../../state/user/userSlice'
+import { SUPPORT_CONTACT } from '../../config/support'
 import LoginPage from './index'
 
-const renderPage = () => {
+const renderWith = (Page: React.ComponentType) => {
   const store = configureStore({ reducer: { user: userReducer } })
   return render(
     <Provider store={store}>
       <MemoryRouter>
-        <LoginPage />
+        <Page />
       </MemoryRouter>
     </Provider>
   )
 }
 
+const renderPage = () => renderWith(LoginPage)
+
 afterEach(() => vi.restoreAllMocks())
 
 describe('login page support contact', () => {
-  // SUPPORT_CONTACT is null until BRGY-121 supplies a real address. These
-  // assertions describe that state; the second block covers the configured one.
-  it('offers no focusable control when no support contact is configured', () => {
+  // BRGY-121 set SUPPORT_CONTACT, so the configured branch is now the default
+  // one. The null branch is still supported and is covered below.
+  it('links to the configured support contact', () => {
     renderPage()
 
-    // The old markup was <button>Contact your administrator</button> with no
-    // onClick — focusable, announced as actionable, and completely inert.
-    expect(screen.queryByRole('button', { name: /contact your administrator/i })).toBeNull()
-    expect(screen.queryByRole('link', { name: /contact your administrator/i })).toBeNull()
-  })
-
-  it('still tells the user who resolves sign-in problems', () => {
-    renderPage()
-
-    expect(
-      screen.getByText(/your barangay administrator issues and resets accounts/i)
-    ).toBeInTheDocument()
+    const link = screen.getByRole('link', { name: /contact your administrator/i })
+    expect(link).toHaveAttribute('href', `mailto:${SUPPORT_CONTACT}`)
   })
 
   it('no longer asks whether the user has an account', () => {
@@ -50,8 +43,9 @@ describe('login page support contact', () => {
     renderPage()
 
     // Guards the defect class rather than the single instance: a focusable
-    // element with neither a handler nor a destination is the bug.
+    // element with neither a handler nor a destination is the bug (BRGY-96).
     const links = screen.queryAllByRole('link')
+    expect(links.length).toBeGreaterThan(0)
     for (const link of links) {
       expect(link).toHaveAttribute('href')
       expect(link.getAttribute('href')).not.toBe('')
@@ -59,26 +53,24 @@ describe('login page support contact', () => {
   })
 })
 
-describe('login page support contact when configured', () => {
-  it('renders a mailto link once an address is set', async () => {
+describe('login page support contact when unset', () => {
+  it('falls back to plain text with nothing focusable', async () => {
     vi.resetModules()
     vi.doMock('../../config/support', () => ({
-      SUPPORT_CONTACT: 'ithelpdesk@example.gov.ph',
-      supportMailto: () => 'mailto:ithelpdesk@example.gov.ph',
+      SUPPORT_CONTACT: null,
+      supportMailto: () => null,
     }))
 
-    const { default: ConfiguredLoginPage } = await import('./index')
-    const store = configureStore({ reducer: { user: userReducer } })
-    render(
-      <Provider store={store}>
-        <MemoryRouter>
-          <ConfiguredLoginPage />
-        </MemoryRouter>
-      </Provider>
-    )
+    const { default: UnconfiguredLoginPage } = await import('./index')
+    renderWith(UnconfiguredLoginPage)
 
-    const link = screen.getByRole('link', { name: /contact your administrator/i })
-    expect(link).toHaveAttribute('href', 'mailto:ithelpdesk@example.gov.ph')
+    // The original defect was <button>Contact your administrator</button> with
+    // no onClick — focusable, announced as actionable, completely inert.
+    expect(screen.queryByRole('button', { name: /contact your administrator/i })).toBeNull()
+    expect(screen.queryByRole('link', { name: /contact your administrator/i })).toBeNull()
+    expect(
+      screen.getByText(/your barangay administrator issues and resets accounts/i)
+    ).toBeInTheDocument()
 
     vi.doUnmock('../../config/support')
     vi.resetModules()
