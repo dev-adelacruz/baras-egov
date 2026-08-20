@@ -22,7 +22,11 @@ const accessNotes = [
 const BrandPanel: React.FC = () => (
   // Green panel, orange accents — the seal's own arrangement: the field is
   // green, the sun and handshake on top of it are orange.
-  <div className="hidden lg:flex lg:w-[58%] relative flex-col justify-between p-12 overflow-hidden bg-gradient-to-br from-slate-950 via-accent-950 to-slate-950">
+  // An even split, not 58/42. The panel is a dark gradient carrying a 36px
+  // extrabold headline; the form is small, white and quiet. Giving the backdrop
+  // the larger half as well made it win the squint test outright, which inverts
+  // what this screen is for — the panel is context, signing in is the task.
+  <div className="hidden lg:flex lg:w-1/2 relative flex-col justify-between p-12 overflow-hidden bg-gradient-to-br from-slate-950 via-accent-950 to-slate-950">
     {/* Animated orbs */}
     <div className="absolute inset-0 overflow-hidden pointer-events-none">
       <div className="absolute -top-32 -left-32 w-[420px] h-[420px] rounded-full bg-accent-500/20 blur-3xl animate-float" />

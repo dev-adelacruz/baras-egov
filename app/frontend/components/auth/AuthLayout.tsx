@@ -27,7 +27,12 @@ const AuthLayout: React.FC<AuthLayoutProps> = ({ children, aside }) => (
         <BrandMark />
       </div>
 
-      <div className="w-full max-w-sm">{children}</div>
+      {/* max-w-md (448px), not max-w-sm (384px). On login this is the half of
+          the screen doing the actual work, and 384px next to an 835px panel
+          read as the secondary column. Applied in the shell rather than on
+          login alone so the three auth pages keep the one shared measure.
+          Mobile is unaffected — below 448px the cap never binds. */}
+      <div className="w-full max-w-md">{children}</div>
 
       <p className="mt-12 text-xs text-slate-500">
         © {new Date().getFullYear()} {PRODUCT_NAME}. All rights reserved.
