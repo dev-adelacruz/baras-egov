@@ -2,6 +2,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowLeft, Search, UserPlus, ShieldAlert, AlertCircle } from 'lucide-react';
 import { usePermissions } from '../../../hooks/usePermissions';
+import AppLayout from '../../../components/layout/AppLayout';
 import { TEXT_LINK } from '../../../components/ui/linkStyles';
 import {
   adminUserService,
@@ -90,30 +91,30 @@ const AdminUsersPage: React.FC = () => {
   };
 
   if (!canRead) {
+    // Rendered inside the shell too, so someone who lands here by URL keeps the
+    // nav and a way to sign out instead of hitting a dead end. The layout owns
+    // the <h1>; this branch supplies its text via `title`.
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-slate-50 px-6 text-center">
-        <ShieldAlert className="w-10 h-10 text-slate-400 mb-3" />
-        <h1 className="text-lg font-bold text-slate-900">Access restricted</h1>
-        <p className="text-sm text-slate-500 mt-1">You don't have permission to manage user accounts.</p>
-        <Link to="/" className={`mt-4 inline-flex items-center gap-2 text-sm ${TEXT_LINK}`}>
-          <ArrowLeft className="w-4 h-4" />
-          Back to dashboard
-        </Link>
-      </div>
+      <AppLayout title="Access restricted">
+        <div className="flex flex-col items-center justify-center py-16 text-center">
+          <ShieldAlert className="w-10 h-10 text-slate-400 mb-3" />
+          <p className="text-sm text-slate-500">You don't have permission to manage user accounts.</p>
+          <Link to="/" className={`mt-4 inline-flex items-center gap-2 text-sm py-1.5 ${TEXT_LINK}`}>
+            <ArrowLeft className="w-4 h-4" />
+            Back to dashboard
+          </Link>
+        </div>
+      </AppLayout>
     );
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 p-4 lg:p-8">
-      <div className="max-w-5xl mx-auto space-y-6">
-        <div className="flex items-center justify-between flex-wrap gap-3">
-          <div>
-            <Link to="/" className={`inline-flex items-center gap-1.5 text-xs mb-1 ${TEXT_LINK}`}>
-              <ArrowLeft className="w-3.5 h-3.5" />
-              Dashboard
-            </Link>
-            <h1 className="text-xl font-bold text-slate-900">Staff Accounts</h1>
-          </div>
+    // No page chrome of its own: no min-h-screen, no max-w cap, no back-link and
+    // no <h1>. The shell supplies all four, and the sidebar's "Dashboard" item
+    // replaces the 12px text link that used to be the only route back.
+    <AppLayout title="Staff Accounts">
+      <div className="space-y-6">
+        <div className="flex items-center justify-end flex-wrap gap-3">
           {canManage && (
             <button
               onClick={() => setShowCreate((v) => !v)}
@@ -248,7 +249,7 @@ const AdminUsersPage: React.FC = () => {
           </table>
         </div>
       </div>
-    </div>
+    </AppLayout>
   );
 };
 
