@@ -66,7 +66,10 @@ const LoginForm: React.FC<LoginFormProps> = ({ onSuccess }) => {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-bold text-slate-900 tracking-tight">Sign in to your account</h2>
+        {/* h1, not h2: this is what the page is for. Login's decorative panel
+            tagline used to hold the only h1 and is hidden below `lg`, so on a
+            phone the document opened on an h2 with no title above it. */}
+        <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Sign in to your account</h1>
         <p className="mt-1.5 text-sm text-slate-500">Enter your credentials to access the dashboard.</p>
       </div>
 
@@ -127,8 +130,12 @@ const LoginForm: React.FC<LoginFormProps> = ({ onSuccess }) => {
           }
         />
 
+        {/* `py-1.5` on both controls, not decoration: each was 20px tall, under
+            the 24px floor in WCAG 2.2 2.5.8 (AA). Neither qualifies for the
+            inline exception — that covers targets sized by surrounding text in
+            a sentence, and these two sit alone in this row. 20px → 26px. */}
         <div className="flex items-center justify-between pt-1">
-          <label className="flex items-center gap-2.5 cursor-pointer select-none">
+          <label className="flex items-center gap-2.5 py-1.5 cursor-pointer select-none">
             <input
               type="checkbox"
               checked={rememberMe}
@@ -141,7 +148,7 @@ const LoginForm: React.FC<LoginFormProps> = ({ onSuccess }) => {
             />
             <span className="text-sm text-slate-600">Remember me</span>
           </label>
-          <Link to="/forgot-password" className={`text-sm ${TEXT_LINK}`}>
+          <Link to="/forgot-password" className={`text-sm py-1.5 ${TEXT_LINK}`}>
             Forgot password?
           </Link>
         </div>

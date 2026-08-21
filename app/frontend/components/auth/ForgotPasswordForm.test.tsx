@@ -25,6 +25,16 @@ describe('ForgotPasswordForm', () => {
     expect(await screen.findByText(/we've sent password reset instructions/i)).toBeInTheDocument()
   })
 
+  it('titles the page with an h1', () => {
+    const { container } = renderForm()
+
+    // This page has no brand panel, so before BRGY-123 it had no h1 at any
+    // width — the document began at <h2>.
+    const h1s = container.querySelectorAll('h1')
+    expect(h1s).toHaveLength(1)
+    expect(h1s[0]).toHaveTextContent(/reset your password/i)
+  })
+
   it('shows an error message when the request fails', async () => {
     vi.spyOn(authService, 'requestPasswordReset').mockRejectedValue(new Error('Server error'))
     renderForm()

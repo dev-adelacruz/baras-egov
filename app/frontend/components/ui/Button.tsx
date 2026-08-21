@@ -21,8 +21,12 @@ const VARIANTS: Record<ButtonVariant, string> = {
     'shadow-md shadow-brand-600/20 enabled:hover:shadow-lg enabled:hover:shadow-brand-600/30',
 };
 
+// `py-3` (48px), not `py-2.5` (40px). 40px cleared WCAG 2.2 2.5.8's 24px floor
+// but sat under the 44px iOS / 48dp Material target for a primary action — and
+// on a phone this button is the whole task. Set here rather than per-page so
+// login, forgot-password and reset-password move together.
 const BASE =
-  'group relative flex items-center justify-center w-full px-4 py-2.5 rounded-xl ' +
+  'group relative flex items-center justify-center w-full px-4 py-3 rounded-xl ' +
   'text-sm font-semibold transition-all duration-150 ' +
   'focus:outline-none focus:ring-2 focus:ring-offset-2 ' +
   'disabled:opacity-60 disabled:cursor-not-allowed';
