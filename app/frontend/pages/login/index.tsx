@@ -64,12 +64,18 @@ const BrandPanel: React.FC = () => (
           <span className="w-1.5 h-1.5 rounded-full bg-accent-400 animate-pulse" />
           <span className="text-accent-300 text-xs font-semibold tracking-widest uppercase">Authorised staff only</span>
         </div>
-        <h1 className="text-4xl font-extrabold text-white leading-[1.15] tracking-tight">
+        {/* Deliberately not a heading. This is a tagline, and it lives inside a
+            `hidden lg:flex` panel — as an <h1> it was the page's only one, so
+            below 1024px the document had no h1 at all and opened on the form's
+            <h2>. The form heading is the page's actual subject and now carries
+            h1; making this an h2 instead would put an h2 before that h1 in DOM
+            order, since the panel renders first. Size is unchanged. */}
+        <p className="text-4xl font-extrabold text-white leading-[1.15] tracking-tight">
           Barangay records,<br />
           <span className="text-transparent bg-clip-text bg-gradient-to-r from-accent-400 via-accent-300 to-brand-400">
             in one console.
           </span>
-        </h1>
+        </p>
         {/* No cap of its own — it fills the 512px column, which at 16px is
             about 64 characters, inside the 45–75 comfortable range. */}
         <p className="text-slate-400 text-base leading-relaxed">

@@ -9,7 +9,10 @@ import { TEXT_LINK } from '../ui/linkStyles';
 const BackToSignIn: React.FC = () => (
   <Link
     to="/login"
-    className={`inline-flex items-center gap-2 text-sm ${TEXT_LINK}`}
+    // `py-1.5` lifts this from 20px to 26px, over the 24px floor in WCAG 2.2
+    // 2.5.8. It stands alone under the form, so the inline exception does not
+    // apply to it.
+    className={`inline-flex items-center gap-2 text-sm py-1.5 ${TEXT_LINK}`}
   >
     <ArrowLeft className="w-4 h-4" aria-hidden="true" />
     Back to sign in
@@ -54,7 +57,8 @@ const ForgotPasswordForm: React.FC = () => {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-bold text-slate-900 tracking-tight">Reset your password</h2>
+        {/* h1 — this page has no brand panel, so it had no heading above h2. */}
+        <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Reset your password</h1>
         <p className="mt-1.5 text-sm text-slate-500">
           Enter your email and we'll send you instructions to reset your password.
         </p>

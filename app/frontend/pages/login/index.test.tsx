@@ -31,6 +31,23 @@ describe('login page support contact', () => {
     expect(link).toHaveAttribute('href', `mailto:${SUPPORT_CONTACT}`)
   })
 
+  it('exposes exactly one h1, and it names the task rather than the brand', () => {
+    const { container } = renderPage()
+
+    // The brand panel's tagline used to be the page's only <h1>, inside a
+    // `hidden lg:flex` container — so below 1024px the document rendered no h1
+    // at all and opened on an <h2>. jsdom applies no CSS, so the guard here is
+    // the count: exactly one h1 in the DOM means no viewport can lose it.
+    const h1s = container.querySelectorAll('h1')
+    expect(h1s).toHaveLength(1)
+    expect(h1s[0]).toHaveTextContent(/sign in to your account/i)
+
+    // And nothing outranks it — an h2 before the h1 would be its own defect,
+    // since the panel renders first in DOM order.
+    const headings = container.querySelectorAll('h1, h2, h3, h4, h5, h6')
+    expect(headings[0].tagName).toBe('H1')
+  })
+
   it('no longer asks whether the user has an account', () => {
     renderPage()
 
