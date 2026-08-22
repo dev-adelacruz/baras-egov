@@ -5,6 +5,7 @@ import { logoutUser } from '../../state/user/userSlice';
 import { RootState } from '../../state/store';
 import { usePermissions } from '../../hooks/usePermissions';
 import BrandMark from '../ui/BrandMark';
+import { useOverlay } from '../ui/useOverlay';
 import {
   LayoutDashboard, User, Settings, LogOut, Bell,
   ChevronDown, Users, Menu, X,
@@ -66,6 +67,14 @@ const AppLayout: React.FC<AppLayoutProps> = ({ title, children }) => {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const sidebarRef = useRef<HTMLElement>(null);
+
+  // The sidebar is a static rail at `lg` and an overlay below it, so it can't
+  // wear a Dialog's chrome — but it needs every one of that primitive's
+  // behaviours. `useOverlay` (BRGY-126) supplies them: focus moves in on open,
+  // Tab is contained, Escape closes, focus returns to the menu button, and the
+  // page behind stops scrolling. Before this it had none of them.
+  useOverlay({ open: sidebarOpen, onClose: () => setSidebarOpen(false), panelRef: sidebarRef });
 
   const handleLogout = () => {
     dispatch(logoutUser() as any);
@@ -101,25 +110,36 @@ const AppLayout: React.FC<AppLayoutProps> = ({ title, children }) => {
     // the sidebar stays put via `lg:sticky` instead of a fixed-height shell.
     <div className="flex min-h-dvh bg-slate-50">
 
-      {/* Mobile overlay */}
+      {/* Mobile scrim */}
       {sidebarOpen && (
         <div
-          className="fixed inset-0 bg-black/50 z-20 lg:hidden backdrop-blur-sm"
-          onClick={() => setSidebarOpen(false)}
+          className="fixed inset-0 bg-slate-950/50 z-20 lg:hidden backdrop-blur-[2px] animate-overlay-fade"
+          onMouseDown={() => setSidebarOpen(false)}
+          aria-hidden="true"
         />
       )}
 
       {/* ── Sidebar ── */}
-      {/* `invisible` when the drawer is closed, not just translated off-canvas.
-          Sliding it to x=-256 leaves its six controls in the tab order while
-          nothing is on screen — measured: a keyboard user hit Close/Dashboard/
-          Users/Profile/Settings/Sign out at x=-244 before reaching the page.
-          `visibility: hidden` removes descendants from the tab order; React 18
-          has no `inert` prop, so this is the version-safe way to do it.
+      {/* `invisible` when closed, not just translated off-canvas. Sliding it to
+          x=-256 leaves its six controls in the tab order while nothing is on
+          screen — measured: a keyboard user hit Close/Dashboard/Users/Profile/
+          Settings/Sign out at x=-244 before reaching the page. `visibility:
+          hidden` removes descendants from the tab order; React 18 has no
+          `inert` prop, so this is the version-safe way to do it. It also keeps
+          the closed rail out of `useOverlay`'s focus trap.
           Cost: closing no longer animates out. Opening still slides in. */}
-      <aside className={`
+      <aside
+        ref={sidebarRef}
+        tabIndex={-1}
+        // Only an overlay below `lg`. At `lg` it is a static rail, so it must
+        // not claim to be a modal — `aria-modal` on a persistent sidebar would
+        // tell a screen reader the rest of the page is inert when it isn't.
+        role={sidebarOpen ? 'dialog' : undefined}
+        aria-modal={sidebarOpen ? true : undefined}
+        aria-label={sidebarOpen ? 'Main menu' : undefined}
+        className={`
         fixed lg:sticky inset-y-0 lg:inset-y-auto lg:top-0 left-0 z-30 lg:h-dvh
-        w-64 bg-slate-900 flex flex-col shrink-0
+        w-64 bg-slate-900 flex flex-col shrink-0 focus:outline-none
         transform transition-transform duration-300 ease-in-out
         ${sidebarOpen
           ? 'translate-x-0 visible'
