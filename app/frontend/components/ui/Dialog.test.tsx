@@ -100,6 +100,38 @@ describe('Dialog', () => {
     }
   })
 
+  // AC 7 — the two sizes. Asserted as pixels rather than class strings so the
+  // test is about the criterion (compact ~430px, form ~560px) and not about how
+  // the utility happens to be spelled. There is no consumer rendering a Dialog
+  // yet, so without this nothing would catch a wrong value until BRGY-129
+  // builds the create form against it.
+  const maxWidthPx = (el: HTMLElement): number => {
+    const rem = el.className.match(/max-w-\[([\d.]+)rem\]/)
+    if (!rem) throw new Error(`no max-w-[…rem] utility on panel: ${el.className}`)
+    return parseFloat(rem[1]) * 16
+  }
+
+  it.each([
+    ['compact' as const, 430],
+    ['form' as const, 560],
+  ])('sizes the %s dialog to %ipx', (size, expected) => {
+    render(
+      <Dialog open onClose={() => {}} title="Sized" size={size} testId="panel">
+        <p>body</p>
+      </Dialog>
+    )
+    expect(maxWidthPx(screen.getByTestId('panel'))).toBe(expected)
+  })
+
+  it('defaults to the form size', () => {
+    render(
+      <Dialog open onClose={() => {}} title="Default" testId="panel">
+        <p>body</p>
+      </Dialog>
+    )
+    expect(maxWidthPx(screen.getByTestId('panel'))).toBe(560)
+  })
+
   it('locks page scroll while open and restores it after', async () => {
     const user = userEvent.setup()
     render(<Harness />)
@@ -135,6 +167,12 @@ describe('ConfirmDialog', () => {
   it('is an alertdialog — it interrupts and must be resolved', () => {
     setup()
     expect(screen.getByRole('alertdialog', { name: 'Deactivate this account?' })).toBeInTheDocument()
+  })
+
+  it('uses the compact size — one decision, not a form', () => {
+    setup({ testId: 'confirm-panel' })
+    const cls = screen.getByTestId('confirm-panel').className
+    expect(cls).toMatch(/max-w-\[26\.875rem\]/)
   })
 
   it('names the action rather than saying OK', () => {
