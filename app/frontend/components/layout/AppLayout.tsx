@@ -102,6 +102,25 @@ const AppLayout: React.FC<AppLayoutProps> = ({ title, children }) => {
     setSidebarOpen(false);
   }, [pathname]);
 
+  // Close it when the viewport crosses into `lg`, where the sidebar stops being
+  // an overlay and becomes a static rail.
+  //
+  // Without this, opening the menu at 390px and resizing to 1440px (rotating a
+  // tablet) left `sidebarOpen` true: the rail kept `role="dialog"` and
+  // `aria-modal`, the body stayed `overflow: hidden`, and both the close button
+  // and the scrim are `lg:hidden` — so the page could not be scrolled and had no
+  // visible way out. Closing here resolves all four at once, which suppressing
+  // the hook alone would not: the aria attributes derive from this state.
+  useEffect(() => {
+    const desktop = window.matchMedia('(min-width: 1024px)');
+    const sync = (e: MediaQueryList | MediaQueryListEvent) => {
+      if (e.matches) setSidebarOpen(false);
+    };
+    sync(desktop);
+    desktop.addEventListener('change', sync);
+    return () => desktop.removeEventListener('change', sync);
+  }, []);
+
   return (
     // `min-h-dvh`, not `h-screen overflow-hidden`. 100vh excludes mobile browser
     // chrome, so the old shell clipped its own content on short viewports and
@@ -110,11 +129,15 @@ const AppLayout: React.FC<AppLayoutProps> = ({ title, children }) => {
     // the sidebar stays put via `lg:sticky` instead of a fixed-height shell.
     <div className="flex min-h-dvh bg-slate-50">
 
-      {/* Mobile scrim */}
+      {/* Mobile scrim. `preventDefault` keeps mousedown's default focus change
+          from undoing the focus restore — see the note in Overlay.tsx. */}
       {sidebarOpen && (
         <div
           className="fixed inset-0 bg-slate-950/50 z-20 lg:hidden backdrop-blur-[2px] animate-overlay-fade"
-          onMouseDown={() => setSidebarOpen(false)}
+          onMouseDown={(e) => {
+            e.preventDefault();
+            setSidebarOpen(false);
+          }}
           aria-hidden="true"
         />
       )}

@@ -29,6 +29,25 @@ class MemoryStorage implements Storage {
 Object.defineProperty(globalThis, 'localStorage', { value: new MemoryStorage(), writable: true })
 Object.defineProperty(globalThis, 'sessionStorage', { value: new MemoryStorage(), writable: true })
 
+// jsdom implements no CSSOM view module, so `window.matchMedia` is undefined —
+// any component that reacts to a breakpoint throws on mount. Reports the query
+// as unmatched, which under this app's mobile-first breakpoints means tests run
+// at the narrow layout unless a test overrides it.
+Object.defineProperty(globalThis, 'matchMedia', {
+  writable: true,
+  value: (query: string): MediaQueryList =>
+    ({
+      matches: false,
+      media: query,
+      onchange: null,
+      addEventListener: () => {},
+      removeEventListener: () => {},
+      addListener: () => {}, // deprecated, kept for libraries that still call it
+      removeListener: () => {},
+      dispatchEvent: () => false,
+    }) as unknown as MediaQueryList,
+})
+
 // Unmount React trees and reset storage between tests.
 afterEach(() => {
   cleanup()

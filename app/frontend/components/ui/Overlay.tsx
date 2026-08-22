@@ -70,11 +70,19 @@ const Overlay: React.FC<OverlayProps> = ({
         Scrim. `onMouseDown` rather than `onClick`: a drag that starts inside the
         panel (selecting text in a field) and ends on the scrim would otherwise
         dismiss the overlay and discard what was typed.
+
+        `preventDefault` is load-bearing, not tidiness. mousedown's default
+        action moves focus, and it runs *after* this handler — so without it the
+        browser blanks the focus `useOverlay` just restored to the trigger.
+        Measured before the guard: Escape-close returned focus to the trigger,
+        scrim-close left `document.activeElement` null.
       */}
       <div
         className="absolute inset-0 bg-slate-950/50 backdrop-blur-[2px] animate-overlay-fade"
         onMouseDown={(e) => {
-          if (e.target === e.currentTarget) onClose();
+          if (e.target !== e.currentTarget) return;
+          e.preventDefault();
+          onClose();
         }}
         aria-hidden="true"
       />

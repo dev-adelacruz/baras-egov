@@ -69,6 +69,24 @@ describe('Dialog', () => {
     await waitFor(() => expect(document.activeElement).toBe(trigger))
   })
 
+  it('returns focus to the trigger when dismissed by the scrim too', async () => {
+    const user = userEvent.setup()
+    render(<Harness />)
+
+    const trigger = screen.getByRole('button', { name: 'Open dialog' })
+    await user.click(trigger)
+    await waitFor(() => expect(screen.getByRole('dialog')).toBeInTheDocument())
+
+    // Regression guard. Focus return was only ever asserted on the Escape path,
+    // so a scrim-close that blanked focus shipped unnoticed: mousedown's default
+    // action moves focus and runs *after* the handler, undoing the restore.
+    const scrim = document.querySelector('[aria-hidden="true"]') as HTMLElement
+    await user.click(scrim)
+
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+    expect(document.activeElement).toBe(trigger)
+  })
+
   it('contains Tab within the panel', async () => {
     const user = userEvent.setup()
     render(<Harness initial />)

@@ -58,14 +58,9 @@ interface UseOverlayOptions {
   onClose: () => void;
   /** The element to trap focus within. */
   panelRef: React.RefObject<HTMLElement>;
-  /**
-   * Skip the scroll lock. The mobile nav sets this at `lg`, where the sidebar
-   * is a static rail rather than an overlay and the page must still scroll.
-   */
-  disabled?: boolean;
 }
 
-export const useOverlay = ({ open, onClose, panelRef, disabled = false }: UseOverlayOptions): void => {
+export const useOverlay = ({ open, onClose, panelRef }: UseOverlayOptions): void => {
   const idRef = useRef<symbol>(Symbol('overlay'));
   const returnFocusRef = useRef<HTMLElement | null>(null);
 
@@ -111,7 +106,7 @@ export const useOverlay = ({ open, onClose, panelRef, disabled = false }: UseOve
   );
 
   useEffect(() => {
-    if (!open || disabled) return undefined;
+    if (!open) return undefined;
 
     const id = idRef.current;
     returnFocusRef.current = document.activeElement as HTMLElement | null;
@@ -136,7 +131,7 @@ export const useOverlay = ({ open, onClose, panelRef, disabled = false }: UseOve
       // they left off instead of at the top of the document.
       returnFocusRef.current?.focus?.();
     };
-  }, [open, disabled, handleKeyDown, panelRef]);
+  }, [open, handleKeyDown, panelRef]);
 };
 
 export default useOverlay;
