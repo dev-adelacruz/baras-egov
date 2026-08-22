@@ -1,6 +1,6 @@
 import React from 'react';
 
-type ButtonVariant = 'primary';
+type ButtonVariant = 'primary' | 'secondary' | 'danger';
 
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: ButtonVariant;
@@ -8,6 +8,12 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   isLoading?: boolean;
   /** Shown beside the spinner while `isLoading` — e.g. "Signing in...". */
   loadingLabel?: string;
+  /**
+   * Auth screens want a full-bleed submit; dialog footers want a button sized
+   * to its label sitting beside a Cancel. Defaults to full width so every
+   * existing caller keeps the shape it had before BRGY-126 added the variants.
+   */
+  fullWidth?: boolean;
 }
 
 const VARIANTS: Record<ButtonVariant, string> = {
@@ -19,14 +25,25 @@ const VARIANTS: Record<ButtonVariant, string> = {
   primary:
     'text-slate-900 bg-brand-500 hover:bg-brand-600 focus:ring-brand-600 ' +
     'shadow-md shadow-brand-600/20 enabled:hover:shadow-lg enabled:hover:shadow-brand-600/30',
+  // The quiet half of a dialog footer. Bordered rather than ghost so it still
+  // reads as a control next to a filled button.
+  secondary:
+    'text-slate-700 bg-white border border-slate-200 hover:bg-slate-50 ' +
+    'hover:text-slate-900 focus:ring-brand-600',
+  // Destructive confirmations only, and only inside a dialog — never as a
+  // resting-state control repeated down a table (that is BRGY-120's defect).
+  // White on danger-600 is 4.83:1.
+  danger:
+    'text-white bg-danger-600 hover:bg-danger-700 focus:ring-danger-600 ' +
+    'shadow-md shadow-danger-600/20',
 };
 
-// `py-3` (48px), not `py-2.5` (40px). 40px cleared WCAG 2.2 2.5.8's 24px floor
-// but sat under the 44px iOS / 48dp Material target for a primary action — and
-// on a phone this button is the whole task. Set here rather than per-page so
-// login, forgot-password and reset-password move together.
+// `py-3` — a 44px control (12 + 20 line-box + 12). `py-2.5` gave 40px, which
+// cleared WCAG 2.2 2.5.8's 24px floor but sat under the 44px iOS target for a
+// primary action, and on a phone this button is the whole task. Set here rather
+// than per-page so login, forgot-password and reset-password move together.
 const BASE =
-  'group relative flex items-center justify-center w-full px-4 py-3 rounded-xl ' +
+  'group relative flex items-center justify-center px-4 py-3 rounded-xl ' +
   'text-sm font-semibold transition-all duration-150 ' +
   'focus:outline-none focus:ring-2 focus:ring-offset-2 ' +
   'disabled:opacity-60 disabled:cursor-not-allowed';
@@ -40,6 +57,7 @@ const Button: React.FC<ButtonProps> = ({
   variant = 'primary',
   isLoading = false,
   loadingLabel,
+  fullWidth = true,
   disabled,
   className = '',
   children,
@@ -48,7 +66,9 @@ const Button: React.FC<ButtonProps> = ({
   <button
     {...rest}
     disabled={disabled || isLoading}
-    className={`${BASE} ${VARIANTS[variant]} ${className}`.trim()}
+    className={`${BASE} ${fullWidth ? 'w-full' : ''} ${VARIANTS[variant]} ${className}`
+      .replace(/\s+/g, ' ')
+      .trim()}
   >
     {isLoading ? (
       <span className="flex items-center gap-2">

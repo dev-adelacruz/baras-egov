@@ -110,6 +110,29 @@
   to { width: var(--bar-width); }
 }
 
+/* Overlay entrance (BRGY-126). Enter only — Dialog and Drawer unmount on close
+   rather than animating out, which keeps the primitive free of exit-transition
+   state. Same trade AppLayout's drawer already made. */
+@keyframes overlay-fade {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes panel-rise {
+  from { opacity: 0; transform: translateY(10px) scale(0.98); }
+  to   { opacity: 1; transform: none; }
+}
+
+@keyframes panel-slide-right {
+  from { transform: translateX(100%); }
+  to   { transform: none; }
+}
+
+@keyframes panel-slide-up {
+  from { transform: translateY(100%); }
+  to   { transform: none; }
+}
+
 /* Decorative motion only — these loop forever in peripheral vision and carry
    no information, so they are opt-in. Functional motion (the submit spinner,
    hover/focus transitions) is deliberately left ungated: it communicates
@@ -128,6 +151,21 @@
     }
     .animate-bar-fill {
       animation: bar-fill 1s ease-out forwards;
+    }
+    /* 180ms, ease-out: fast enough not to delay the task, long enough to show
+       where the panel came from. Suppressed entirely under reduced motion —
+       the overlay still appears, it just doesn't travel. */
+    .animate-overlay-fade {
+      animation: overlay-fade 180ms ease-out;
+    }
+    .animate-panel-rise {
+      animation: panel-rise 180ms ease-out;
+    }
+    .animate-panel-slide-right {
+      animation: panel-slide-right 220ms ease-out;
+    }
+    .animate-panel-slide-up {
+      animation: panel-slide-up 220ms ease-out;
     }
   }
 }
