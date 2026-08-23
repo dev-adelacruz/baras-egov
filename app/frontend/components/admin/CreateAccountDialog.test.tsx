@@ -238,9 +238,32 @@ describe('CreateAccountDialog', () => {
     expect(createMock()).toHaveBeenCalledWith({
       email: 'juan@example.gov.ph',
       password: 'sekretong-lihim',
-      role: 'admin',
+      role: 'municipal_staff',
       office: 'civil_registry',
     })
+  })
+
+  // Regression guard. The first cut of this dialog defaulted to
+  // ASSIGNABLE_ROLES[0], which is 'admin' — so an untouched form provisioned a
+  // full administrator, where the form it replaced defaulted to staff.
+  it('defaults to the least-privileged role, not admin', () => {
+    setup()
+    expect(screen.getByLabelText('Role')).toHaveValue('municipal_staff')
+  })
+
+  it.each([
+    ['client validation', undefined],
+    ['a server rejection', 'Email has already been taken'],
+  ])('moves focus to the failing field on %s', async (_label, serverMessage) => {
+    if (serverMessage) createMock().mockRejectedValue(new Error(serverMessage))
+    const { user } = setup()
+
+    if (serverMessage) await fillValid(user)
+    await user.click(screen.getByRole('button', { name: 'Create account' }))
+
+    // The server path used to leave focus on the submit button: .focus() ran
+    // while isSubmitting still had the field disabled, so it did nothing.
+    await waitFor(() => expect(document.activeElement).toBe(screen.getByLabelText('Email')))
   })
 
   it('clears a field error as soon as the field is corrected', async () => {

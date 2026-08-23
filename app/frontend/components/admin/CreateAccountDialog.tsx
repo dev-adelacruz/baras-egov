@@ -50,7 +50,10 @@ type FieldErrors = Partial<Record<FieldName, string>>;
 const emptyForm = {
   email: '',
   password: '',
-  role: ASSIGNABLE_ROLES[0],
+  // Least privilege, and named rather than taken as ASSIGNABLE_ROLES[0] — that
+  // index is `admin`, so an untouched form would provision an administrator.
+  // Whoever is creating the account has to choose to elevate it.
+  role: 'municipal_staff',
   office: OFFICE_MODULES[0],
 };
 
@@ -89,6 +92,19 @@ const CreateAccountDialog: React.FC<CreateAccountDialogProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [created, setCreated] = useState<{ email: string; password: string } | null>(null);
   const [copied, setCopied] = useState(false);
+  const [focusField, setFocusField] = useState<FieldName | null>(null);
+
+  // Focus is requested as state, then applied here, rather than called inline
+  // where the error is set. On the server-rejection path `isSubmitting` is
+  // still true at that point, so the field is rendered disabled and focusing it
+  // is a no-op — the field-level error appeared but a keyboard user was left on
+  // the submit button. Running it after the render that re-enables the field
+  // fixes both paths with one mechanism.
+  useEffect(() => {
+    if (!focusField) return;
+    document.getElementById(`create-account-${focusField}`)?.focus();
+    setFocusField(null);
+  }, [focusField]);
 
   // Reset on open rather than on close: resetting on close would blank the
   // success panel out from under the admin while they are still reading the
@@ -101,6 +117,7 @@ const CreateAccountDialog: React.FC<CreateAccountDialogProps> = ({
     setIsSubmitting(false);
     setCreated(null);
     setCopied(false);
+    setFocusField(null);
   }, [open]);
 
   const takenEmails = useMemo(
@@ -144,7 +161,7 @@ const CreateAccountDialog: React.FC<CreateAccountDialogProps> = ({
     const errors = validate();
     setFieldErrors(errors);
     if (Object.keys(errors).length > 0) {
-      document.getElementById(`create-account-${Object.keys(errors)[0]}`)?.focus();
+      setFocusField(Object.keys(errors)[0] as FieldName);
       return;
     }
 
@@ -163,7 +180,7 @@ const CreateAccountDialog: React.FC<CreateAccountDialogProps> = ({
       const { field, message } = attributeServerError(raw);
       if (field) {
         setFieldErrors({ [field]: message });
-        document.getElementById(`create-account-${field}`)?.focus();
+        setFocusField(field);
       } else {
         setFormError(message);
       }
