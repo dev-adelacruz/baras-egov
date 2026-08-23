@@ -95,7 +95,18 @@ const Overlay: React.FC<OverlayProps> = ({
         aria-describedby={description ? descId : undefined}
         tabIndex={-1}
         data-testid={testId}
-        className={`relative flex flex-col bg-white shadow-2xl focus:outline-none ${panelClassName}`
+        // `overflow-hidden` clips children to whatever radius the panel itself
+        // carries (BRGY-139). Without it the footer — an opaque `bg-slate-50`
+        // rectangle with no radius of its own — paints over the panel's rounded
+        // bottom corners, so a Dialog rendered square on the bottom and round on
+        // the top. The header escaped it only by having no background.
+        //
+        // Clipping here rather than rounding the footer, because Overlay's
+        // footer is shared with Drawer, whose corners must stay square: a
+        // `rounded-b` on the footer would hard-code Dialog's radius into a
+        // component Drawer also uses. This adapts to each consumer's radius
+        // without either of them knowing about the other.
+        className={`relative flex flex-col bg-white shadow-2xl overflow-hidden focus:outline-none ${panelClassName}`
           .replace(/\s+/g, ' ')
           .trim()}
       >
