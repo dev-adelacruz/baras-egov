@@ -122,3 +122,15 @@ export const OFFICE_MODULES = [
 ];
 
 export const ROLES = ['admin', 'department_head', 'municipal_staff', 'barangay_staff'];
+
+/**
+ * Roles the create form offers. `barangay_staff` is deliberately absent:
+ * `User` validates `barangay` present when the role is `barangay_staff`, and
+ * BRGY-129 drops the Barangay field because a deployment serves one barangay.
+ * Offering it would mean a dropdown option that returns 422 every time.
+ *
+ * `ROLES` keeps the full list so existing accounts still render in the table
+ * and in the per-row role select. The two lists converge when BRGY-136 merges
+ * `municipal_staff` and `barangay_staff` into a single `staff` role.
+ */
+export const ASSIGNABLE_ROLES = ROLES.filter((r) => r !== 'barangay_staff');

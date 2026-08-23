@@ -1,8 +1,9 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowLeft, Search, UserPlus, ShieldAlert, AlertCircle } from 'lucide-react';
 import { usePermissions } from '../../../hooks/usePermissions';
 import AppLayout from '../../../components/layout/AppLayout';
+import CreateAccountDialog from '../../../components/admin/CreateAccountDialog';
 import { TEXT_LINK } from '../../../components/ui/linkStyles';
 import {
   adminUserService,
@@ -13,8 +14,6 @@ import {
 
 const humanize = (value: string | null): string =>
   value ? value.split('_').map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ') : '—';
-
-const emptyForm = { email: '', password: '', role: 'municipal_staff', office: 'civil_registry', barangay: '' };
 
 const AdminUsersPage: React.FC = () => {
   const { can } = usePermissions();
@@ -27,7 +26,6 @@ const AdminUsersPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
-  const [form, setForm] = useState(emptyForm);
 
   const load = useCallback(async () => {
     setIsLoading(true);
@@ -47,24 +45,18 @@ const AdminUsersPage: React.FC = () => {
     }
   }, [load, canRead]);
 
-  const handleCreate = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError(null);
-    try {
-      await adminUserService.create({
-        email: form.email,
-        password: form.password,
-        role: form.role,
-        office: form.office,
-        barangay: form.barangay || undefined,
-      });
-      setForm(emptyForm);
-      setShowCreate(false);
-      await load();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to create account.');
-    }
-  };
+  // The dialog owns submission and its own error surface — it keeps itself open
+  // on success to show the temporary password once. All the page does is
+  // refresh the list underneath.
+  const handleCreated = useCallback(() => {
+    load();
+  }, [load]);
+
+  // Note this is the *loaded* list, so it narrows when a search or office
+  // filter is active — a duplicate outside the current filter won't be caught
+  // here. That is what the server rejection is for; this only spares the admin
+  // a round-trip for the case they can already see on screen.
+  const existingEmails = useMemo(() => users.map((u) => u.email), [users]);
 
   const handleRoleChange = async (user: AdminUser, role: string) => {
     setError(null);
@@ -117,7 +109,7 @@ const AdminUsersPage: React.FC = () => {
         <div className="flex items-center justify-end flex-wrap gap-3">
           {canManage && (
             <button
-              onClick={() => setShowCreate((v) => !v)}
+              onClick={() => setShowCreate(true)}
               className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-brand-500 hover:bg-brand-600 text-slate-900 text-sm font-semibold shadow-lg shadow-brand-600/30 transition-colors"
             >
               <UserPlus className="w-4 h-4" />
@@ -133,39 +125,13 @@ const AdminUsersPage: React.FC = () => {
           </div>
         )}
 
-        {showCreate && canManage && (
-          <form onSubmit={handleCreate} className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <input
-              type="email" required placeholder="Email" aria-label="Email"
-              value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })}
-              className="px-3 py-2 text-sm border border-slate-200 rounded-lg bg-slate-50 focus:outline-none focus:ring-2 focus:ring-brand-600"
-            />
-            <input
-              type="password" required minLength={6} placeholder="Temporary password" aria-label="Password"
-              value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })}
-              className="px-3 py-2 text-sm border border-slate-200 rounded-lg bg-slate-50 focus:outline-none focus:ring-2 focus:ring-brand-600"
-            />
-            <select
-              aria-label="Role" value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })}
-              className="px-3 py-2 text-sm border border-slate-200 rounded-lg bg-slate-50 focus:outline-none focus:ring-2 focus:ring-brand-600"
-            >
-              {ROLES.map((r) => <option key={r} value={r}>{humanize(r)}</option>)}
-            </select>
-            <select
-              aria-label="Office" value={form.office} onChange={(e) => setForm({ ...form, office: e.target.value })}
-              className="px-3 py-2 text-sm border border-slate-200 rounded-lg bg-slate-50 focus:outline-none focus:ring-2 focus:ring-brand-600"
-            >
-              {OFFICE_MODULES.map((m) => <option key={m} value={m}>{humanize(m)}</option>)}
-            </select>
-            <input
-              type="text" placeholder="Barangay (for barangay staff)" aria-label="Barangay"
-              value={form.barangay} onChange={(e) => setForm({ ...form, barangay: e.target.value })}
-              className="px-3 py-2 text-sm border border-slate-200 rounded-lg bg-slate-50 focus:outline-none focus:ring-2 focus:ring-brand-600"
-            />
-            <button type="submit" className="px-4 py-2 rounded-lg bg-brand-500 hover:bg-brand-600 text-slate-900 text-sm font-semibold transition-colors">
-              Create account
-            </button>
-          </form>
+        {canManage && (
+          <CreateAccountDialog
+            open={showCreate}
+            onClose={() => setShowCreate(false)}
+            existingEmails={existingEmails}
+            onCreated={handleCreated}
+          />
         )}
 
         {/* Filters */}
