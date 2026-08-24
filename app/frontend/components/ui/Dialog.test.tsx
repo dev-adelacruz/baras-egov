@@ -132,6 +132,74 @@ describe('Dialog', () => {
     expect(maxWidthPx(screen.getByTestId('panel'))).toBe(560)
   })
 
+  // BRGY-139. The panel's own radius classes were never wrong — this shipped
+  // with `sm:rounded-2xl` correctly on the panel, and every existing assertion
+  // green, while the rendered dialog was round on top and square on the bottom.
+  // The footer's opaque `bg-slate-50` covered the bottom corners and the panel
+  // did not clip it.
+  //
+  // So this asserts the *invariant*, not a literal utility: a panel that has a
+  // radius and contains an opaque-backgrounded section must clip its children.
+  // Swapping rounded-2xl for rounded-xl keeps it passing; removing the clip
+  // does not.
+  describe('corner integrity', () => {
+    const panelOf = (testId: string) => screen.getByTestId(testId)
+    const hasRadius = (el: HTMLElement) => /(^|:)rounded-(?!none)/.test(el.className)
+    const clipsChildren = (el: HTMLElement) => el.className.includes('overflow-hidden')
+
+    it('clips its children when the panel is rounded and the footer is filled', () => {
+      render(
+        <Dialog
+          open
+          onClose={() => {}}
+          title="Sized"
+          testId="panel"
+          footer={<button type="button">Save</button>}
+        >
+          <p>body</p>
+        </Dialog>
+      )
+      const panel = panelOf('panel')
+      const footer = panel.querySelector('.border-t') as HTMLElement
+
+      expect(hasRadius(panel)).toBe(true)
+      // The footer is the element that caused this: opaque fill, no radius.
+      expect(footer.className).toMatch(/bg-slate-50/)
+      expect(hasRadius(footer)).toBe(false)
+      // Therefore the panel must clip, or the fill covers the rounded corners.
+      expect(clipsChildren(panel)).toBe(true)
+    })
+
+    it('clips the confirmation dialog too — its footer is never optional', () => {
+      render(
+        <ConfirmDialog
+          open
+          onClose={() => {}}
+          onConfirm={() => {}}
+          title="Deactivate this account?"
+          description="They will no longer be able to sign in."
+          confirmLabel="Deactivate account"
+          testId="confirm-panel"
+        />
+      )
+      const panel = panelOf('confirm-panel')
+      expect(hasRadius(panel)).toBe(true)
+      expect(clipsChildren(panel)).toBe(true)
+    })
+
+    it('clips the drawer, whose corners are square by design', () => {
+      render(
+        <Drawer open onClose={() => {}} title="Account details" testId="drawer-panel">
+          <p>detail body</p>
+        </Drawer>
+      )
+      // Drawer escaped the bug only incidentally — it has no radius at all. The
+      // clip is on Overlay, so it adapts rather than forcing a radius here.
+      expect(panelOf('drawer-panel').className).toMatch(/rounded-none/)
+      expect(clipsChildren(panelOf('drawer-panel'))).toBe(true)
+    })
+  })
+
   it('locks page scroll while open and restores it after', async () => {
     const user = userEvent.setup()
     render(<Harness />)
