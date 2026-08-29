@@ -65,10 +65,13 @@ export const checkAuthStatus = createAsyncThunk(
 
       if (token) {
         const isValid = await authService.validateToken(token);
-        
+
         if (isValid) {
-          // For now, return only the token; user data can be fetched separately if needed
-          return { token, user: null };
+          // Token only. This thunk validates a token; it has no user data to
+          // contribute and must not claim otherwise — it used to return
+          // `{ token, user: null }`, and the reducer wrote that null straight
+          // over the user `fetchCurrentUser` had just loaded (BRGY-143).
+          return { token };
         }
       }
       return null;
@@ -175,7 +178,11 @@ const userSlice = createSlice({
       if (action.payload) {
         state.isSignedIn = true
         state.token = action.payload.token
-        state.user = action.payload.user
+        // Deliberately does not touch `state.user`. Both this and
+        // fetchCurrentUser are dispatched on boot, so whichever resolved last
+        // used to win — and this one only ever had null to offer. The symptom
+        // was an admin shown as "U" with no email and the role fallback
+        // "Staff", while the page they were on rendered normally (BRGY-143).
       } else {
         state.isSignedIn = false
         state.token = null

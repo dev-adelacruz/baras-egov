@@ -41,10 +41,14 @@ const navItems: Array<{
   { label: 'Settings', icon: Settings, module: 'user_management' },
 ];
 
+// Falls back to nothing, not to a role. This used to return 'Staff' for a null
+// role, so an administrator whose user had not loaded was shown, in persistent
+// chrome, as a member of staff — plausible enough that nobody questioned it
+// (BRGY-143). An empty string is honest: we do not know yet.
 const humanizeRole = (role: string | null): string =>
   role
     ? role.split('_').map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
-    : 'Staff';
+    : '';
 
 interface AppLayoutProps {
   /**

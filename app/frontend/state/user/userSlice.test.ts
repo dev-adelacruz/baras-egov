@@ -1,5 +1,5 @@
 import { configureStore } from '@reduxjs/toolkit'
-import reducer, { signOut, loginUser, logoutUser, fetchCurrentUser } from './userSlice'
+import reducer, { signOut, loginUser, logoutUser, fetchCurrentUser, checkAuthStatus } from './userSlice'
 import { authService } from '../../services/authService'
 import { tokenStorage } from '../../services/tokenStorage'
 
@@ -87,6 +87,37 @@ describe('userSlice reducer', () => {
     })
     expect(s.user).not.toHaveProperty('barangay')
     expect(s).not.toHaveProperty('dataScope')
+  })
+
+  // BRGY-143. Both thunks are dispatched on boot, so this is a real race —
+  // whichever resolved last used to win, and checkAuthStatus only ever had null
+  // to offer. The losing order is the whole bug, so assert it explicitly.
+  it('checkAuthStatus does not blank a user that fetchCurrentUser already loaded', () => {
+    const loaded = reducer(initial, {
+      type: fetchCurrentUser.fulfilled.type,
+      payload: { id: 7, email: 'admin@barangay.gov.local', role: 'admin', office: null, permissions: {} },
+    })
+
+    const after = reducer(loaded, {
+      type: checkAuthStatus.fulfilled.type,
+      payload: { token: 't' },
+    })
+
+    expect(after.user?.email).toBe('admin@barangay.gov.local')
+    expect(after.user?.role).toBe('admin')
+    expect(after.token).toBe('t')
+  })
+
+  it('checkAuthStatus still clears the user when there is no valid session', () => {
+    const loaded = reducer(initial, {
+      type: fetchCurrentUser.fulfilled.type,
+      payload: { id: 7, email: 'admin@barangay.gov.local', role: 'admin', office: null, permissions: {} },
+    })
+
+    const after = reducer(loaded, { type: checkAuthStatus.fulfilled.type, payload: null })
+
+    expect(after.isSignedIn).toBe(false)
+    expect(after.user).toBeNull()
   })
 
   it('signOut clears permissions', () => {

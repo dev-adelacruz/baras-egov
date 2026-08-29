@@ -4,6 +4,7 @@ import { ArrowLeft, Search, UserPlus, ShieldAlert, AlertCircle } from 'lucide-re
 import { usePermissions } from '../../../hooks/usePermissions';
 import AppLayout from '../../../components/layout/AppLayout';
 import CreateAccountDialog from '../../../components/admin/CreateAccountDialog';
+import { ConfirmDialog } from '../../../components/ui/Dialog';
 import { TEXT_LINK } from '../../../components/ui/linkStyles';
 import {
   adminUserService,
@@ -15,8 +16,17 @@ import {
 const humanize = (value: string | null): string =>
   value ? value.split('_').map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ') : '—';
 
+/**
+ * A destructive change waiting on confirmation (BRGY-127). Held as one value
+ * rather than a flag per action, so the dialog can only ever describe the thing
+ * that is actually about to happen.
+ */
+type PendingAction =
+  | { kind: 'toggle'; user: AdminUser }
+  | { kind: 'role'; user: AdminUser; role: string };
+
 const AdminUsersPage: React.FC = () => {
-  const { can } = usePermissions();
+  const { can, userId } = usePermissions();
   const canRead = can('user_management', 'read');
   const canManage = can('user_management', 'manage');
 
@@ -26,6 +36,8 @@ const AdminUsersPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
+  const [pending, setPending] = useState<PendingAction | null>(null);
+  const [isConfirming, setIsConfirming] = useState(false);
 
   const load = useCallback(async () => {
     setIsLoading(true);
@@ -58,28 +70,65 @@ const AdminUsersPage: React.FC = () => {
   // a round-trip for the case they can already see on screen.
   const existingEmails = useMemo(() => users.map((u) => u.email), [users]);
 
-  const handleRoleChange = async (user: AdminUser, role: string) => {
+  // Both destructive actions go through the same confirm step (BRGY-127). The
+  // <select> is left uncontrolled-looking on purpose: `value` stays bound to
+  // `user.role`, so cancelling re-renders the old value straight back in.
+  const confirmPending = async () => {
+    if (!pending) return;
     setError(null);
+    setIsConfirming(true);
     try {
-      await adminUserService.update(user.id, { role });
+      if (pending.kind === 'role') {
+        await adminUserService.update(pending.user.id, { role: pending.role });
+      } else if (pending.user.active) {
+        await adminUserService.deactivate(pending.user.id);
+      } else {
+        await adminUserService.activate(pending.user.id);
+      }
+      setPending(null);
       await load();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update account.');
+      // The server's sentence, not a generic one. On a refused lockout that
+      // message *is* the recovery instruction — "make another account an
+      // administrator first" — so replacing it with "Failed to update account"
+      // would throw away the only thing the admin can act on.
+      const message = err instanceof Error ? err.message : 'Failed to update account.';
+      setPending(null);
+      // Reload first, then set the message. `load` clears the banner on entry,
+      // so setting it beforehand would be wiped by the very refresh that puts
+      // the row back to what the server actually holds.
+      await load();
+      setError(message);
+    } finally {
+      setIsConfirming(false);
     }
   };
 
-  const handleToggleActive = async (user: AdminUser) => {
-    setError(null);
-    try {
-      if (user.active) {
-        await adminUserService.deactivate(user.id);
-      } else {
-        await adminUserService.activate(user.id);
-      }
-      await load();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to change account status.');
+  // Copy for the confirmation. Each branch names the person and the
+  // consequence, because "Are you sure?" tells an admin nothing they did not
+  // already know when they clicked.
+  const confirmCopy = (action: PendingAction) => {
+    if (action.kind === 'role') {
+      return {
+        title: 'Change role',
+        description: `${action.user.email} will become ${humanize(action.role)}. Their access changes immediately.`,
+        confirmLabel: 'Change role',
+        tone: 'default' as const,
+      };
     }
+    return action.user.active
+      ? {
+          title: 'Deactivate account',
+          description: `${action.user.email} will no longer be able to sign in.`,
+          confirmLabel: 'Deactivate account',
+          tone: 'danger' as const,
+        }
+      : {
+          title: 'Reactivate account',
+          description: `${action.user.email} will be able to sign in again.`,
+          confirmLabel: 'Reactivate account',
+          tone: 'default' as const,
+        };
   };
 
   if (!canRead) {
@@ -134,6 +183,17 @@ const AdminUsersPage: React.FC = () => {
           />
         )}
 
+        {pending && (
+          <ConfirmDialog
+            open
+            onClose={() => setPending(null)}
+            onConfirm={confirmPending}
+            isConfirming={isConfirming}
+            testId="admin-users-confirm"
+            {...confirmCopy(pending)}
+          />
+        )}
+
         {/* Filters */}
         <div className="flex flex-wrap items-center gap-3">
           <div className="relative flex-1 min-w-[200px]">
@@ -180,7 +240,7 @@ const AdminUsersPage: React.FC = () => {
                       <select
                         aria-label={`Role for ${user.email}`}
                         value={user.role}
-                        onChange={(e) => handleRoleChange(user, e.target.value)}
+                        onChange={(e) => setPending({ kind: 'role', user, role: e.target.value })}
                         className="px-2 py-1 text-xs border border-slate-200 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-brand-600"
                       >
                         {ROLES.map((r) => <option key={r} value={r}>{humanize(r)}</option>)}
@@ -195,10 +255,17 @@ const AdminUsersPage: React.FC = () => {
                       {user.active ? 'Active' : 'Deactivated'}
                     </span>
                   </td>
-                  {canManage && (
+                  {canManage && user.id === userId && (
+                    // BRGY-127: no control at all on your own row, rather than a
+                    // disabled one with a tooltip. A disabled button still reads
+                    // as "this is something you do here"; the server refuses it
+                    // regardless, so the honest UI is to not offer it.
+                    <td className="px-4 py-3 text-right text-xs text-slate-400">This is you</td>
+                  )}
+                  {canManage && user.id !== userId && (
                     <td className="px-4 py-3 text-right">
                       <button
-                        onClick={() => handleToggleActive(user)}
+                        onClick={() => setPending({ kind: 'toggle', user })}
                         // Activate/Deactivate sat at danger-600 vs brand-700 — two
                         // adjacent actions 11 degrees of hue apart. Green/red instead.
                         className={`text-xs font-semibold underline underline-offset-2 ${user.active ? 'text-danger-600 hover:text-danger-700' : 'text-accent-700 hover:text-accent-800'}`}
