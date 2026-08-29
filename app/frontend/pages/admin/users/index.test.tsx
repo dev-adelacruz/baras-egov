@@ -44,6 +44,25 @@ const renderPage = (permissions: Record<string, string[]>) => {
 // test happened to run last.
 afterEach(() => vi.resetAllMocks())
 
+type User = ReturnType<typeof userEvent.setup>
+
+// BRGY-120: row actions moved behind a neutral ⋯ trigger, so every flow that
+// used to click a red link now opens the menu first.
+const openRowMenu = async (user: User, email: string) =>
+  user.click(await screen.findByRole('button', { name: `Actions for ${email}` }))
+
+const chooseMenuItem = async (user: User, name: string | RegExp) =>
+  user.click(await screen.findByRole('menuitem', { name }))
+
+// BRGY-119: picking a role and confirming it are one dialog.
+const changeRoleTo = async (user: User, email: string, role: string) => {
+  await openRowMenu(user, email)
+  await chooseMenuItem(user, 'Change role…')
+  const dialog = await screen.findByRole('dialog', { name: 'Change role' })
+  await user.selectOptions(within(dialog).getByLabelText('New role'), role)
+  await user.click(within(dialog).getByRole('button', { name: 'Change role' }))
+}
+
 describe('AdminUsersPage', () => {
   it('lists accounts for an admin', async () => {
     ;(adminUserService.list as ReturnType<typeof vi.fn>).mockResolvedValue([
@@ -90,10 +109,13 @@ describe('AdminUsersPage', () => {
       const colleagueRow = within(table).getByText('clerk@baras.gov').closest('tr')!
 
       // Absent, not disabled: a disabled button still reads as "this is
-      // something you do here".
-      expect(within(ownRow).queryByRole('button', { name: /deactivate/i })).toBeNull()
+      // something you do here". With BRGY-120 the whole menu is gone, so there
+      // is no route to a role change on your own row either.
+      expect(within(ownRow).queryByRole('button', { name: /actions for/i })).toBeNull()
       expect(within(ownRow).getByText('This is you')).toBeInTheDocument()
-      expect(within(colleagueRow).getByRole('button', { name: /deactivate/i })).toBeInTheDocument()
+      expect(
+        within(colleagueRow).getByRole('button', { name: 'Actions for clerk@baras.gov' })
+      ).toBeInTheDocument()
     })
 
     it('AC7 — deactivating a colleague confirms first, naming them and the consequence', async () => {
@@ -101,7 +123,8 @@ describe('AdminUsersPage', () => {
       const user = userEvent.setup()
       renderPage(manage)
 
-      await user.click(await screen.findByRole('button', { name: /deactivate/i }))
+      await openRowMenu(user, 'clerk@baras.gov')
+      await chooseMenuItem(user, 'Deactivate account')
 
       const dialog = await screen.findByRole('alertdialog', { name: 'Deactivate account' })
       expect(within(dialog).getByText('clerk@baras.gov will no longer be able to sign in.')).toBeInTheDocument()
@@ -117,23 +140,29 @@ describe('AdminUsersPage', () => {
       const user = userEvent.setup()
       renderPage(manage)
 
-      await user.click(await screen.findByRole('button', { name: /deactivate/i }))
+      await openRowMenu(user, 'clerk@baras.gov')
+      await chooseMenuItem(user, 'Deactivate account')
       await user.click(screen.getByRole('button', { name: 'Cancel' }))
 
       await waitFor(() => expect(screen.queryByRole('alertdialog')).toBeNull())
       expect(adminUserService.deactivate).not.toHaveBeenCalled()
     })
 
-    it('AC7 — a role change confirms first, naming the new role', async () => {
+    it('AC7 — a role change is picked and confirmed in one dialog, naming the person', async () => {
       listReturns([admin, colleague])
       const user = userEvent.setup()
       renderPage(manage)
 
-      await screen.findByText('clerk@baras.gov')
-      await user.selectOptions(screen.getByLabelText('Role for clerk@baras.gov'), 'admin')
+      await openRowMenu(user, 'clerk@baras.gov')
+      await chooseMenuItem(user, 'Change role…')
 
-      const dialog = await screen.findByRole('alertdialog', { name: 'Change role' })
-      expect(within(dialog).getByText(/clerk@baras\.gov will become Admin/)).toBeInTheDocument()
+      const dialog = await screen.findByRole('dialog', { name: 'Change role' })
+      expect(within(dialog).getByText(/clerk@baras\.gov/)).toBeInTheDocument()
+      // Opening the dialog sends nothing — the old inline <select> fired a PATCH
+      // on the change event itself.
+      expect(adminUserService.update).not.toHaveBeenCalled()
+
+      await user.selectOptions(within(dialog).getByLabelText('New role'), 'admin')
       expect(adminUserService.update).not.toHaveBeenCalled()
 
       await user.click(within(dialog).getByRole('button', { name: 'Change role' }))
@@ -153,7 +182,8 @@ describe('AdminUsersPage', () => {
       const user = userEvent.setup()
       renderPage(manage)
 
-      await user.click(await screen.findByRole('button', { name: /deactivate/i }))
+      await openRowMenu(user, 'clerk@baras.gov')
+      await chooseMenuItem(user, 'Deactivate account')
       await user.click(
         within(await screen.findByRole('alertdialog')).getByRole('button', { name: 'Deactivate account' })
       )
@@ -176,8 +206,9 @@ describe('AdminUsersPage', () => {
     const listReturns = (rows: unknown[]) =>
       (adminUserService.list as ReturnType<typeof vi.fn>).mockResolvedValue(rows)
 
-    const deactivateColleague = async (user: ReturnType<typeof userEvent.setup>) => {
-      await user.click(await screen.findByRole('button', { name: /deactivate/i }))
+    const deactivateColleague = async (user: User) => {
+      await openRowMenu(user, 'clerk@baras.gov')
+      await chooseMenuItem(user, 'Deactivate account')
       await user.click(
         within(await screen.findByRole('alertdialog')).getByRole('button', { name: 'Deactivate account' })
       )
@@ -204,11 +235,7 @@ describe('AdminUsersPage', () => {
       const user = userEvent.setup()
       renderPage(manage)
 
-      await screen.findByText('clerk@baras.gov')
-      await user.selectOptions(screen.getByLabelText('Role for clerk@baras.gov'), 'department_head')
-      await user.click(
-        within(await screen.findByRole('alertdialog')).getByRole('button', { name: 'Change role' })
-      )
+      await changeRoleTo(user, 'clerk@baras.gov', 'department_head')
 
       expect(await screen.findByTestId('admin-users-notice')).toHaveTextContent(
         'clerk@baras.gov now has the Department Head role.'
@@ -222,11 +249,7 @@ describe('AdminUsersPage', () => {
       const user = userEvent.setup()
       renderPage(manage)
 
-      await screen.findByText('clerk@baras.gov')
-      await user.selectOptions(screen.getByLabelText('Role for clerk@baras.gov'), 'admin')
-      await user.click(
-        within(await screen.findByRole('alertdialog')).getByRole('button', { name: 'Change role' })
-      )
+      await changeRoleTo(user, 'clerk@baras.gov', 'admin')
 
       const notice = await screen.findByTestId('admin-users-notice')
       expect(notice).toHaveTextContent('clerk@baras.gov now has the Admin role.')
@@ -284,11 +307,7 @@ describe('AdminUsersPage', () => {
       const user = userEvent.setup()
       renderPage(manage)
 
-      await screen.findByText('clerk@baras.gov')
-      await user.selectOptions(screen.getByLabelText('Role for clerk@baras.gov'), 'department_head')
-      await user.click(
-        within(await screen.findByRole('alertdialog')).getByRole('button', { name: 'Change role' })
-      )
+      await changeRoleTo(user, 'clerk@baras.gov', 'department_head')
 
       const notice = await screen.findByTestId('admin-users-notice')
       expect(within(notice).queryByRole('button', { name: 'Undo' })).toBeNull()
@@ -306,7 +325,8 @@ describe('AdminUsersPage', () => {
       const user = userEvent.setup()
       renderPage(manage)
 
-      await user.click(await screen.findByRole('button', { name: /reactivate/i }))
+      await openRowMenu(user, 'clerk@baras.gov')
+      await chooseMenuItem(user, 'Reactivate account')
       await user.click(
         within(await screen.findByRole('alertdialog')).getByRole('button', { name: 'Reactivate account' })
       )
@@ -348,6 +368,118 @@ describe('AdminUsersPage', () => {
       expect(await screen.findByTestId('admin-users-notice')).toHaveTextContent(
         'Created new.clerk@baras.gov.'
       )
+    })
+  })
+
+  /**
+   * BRGY-119 + BRGY-120. At 40 rows the table rendered 40 native selects and 40
+   * red "Deactivate" links — a form, with a stripe of the error colour down its
+   * right edge. Both are the same defect from different directions: a row's
+   * controls were live at rest.
+   */
+  describe('row controls', () => {
+    const admin = { id: 1, email: 'admin@baras.gov', role: 'admin', office: null, active: true }
+    const colleague = { id: 2, email: 'clerk@baras.gov', role: 'staff', office: 'certifications', active: true }
+    const manage = { user_management: ['read', 'write', 'delete', 'manage'] }
+
+    const listReturns = (rows: unknown[]) =>
+      (adminUserService.list as ReturnType<typeof vi.fn>).mockResolvedValue(rows)
+
+    it('BRGY-119 AC1 — the Role column is text, not a control', async () => {
+      listReturns([admin, colleague])
+      renderPage(manage)
+
+      const table = await screen.findByRole('table')
+      const row = within(table).getByText('clerk@baras.gov').closest('tr')!
+      expect(within(row).getByText('Staff')).toBeInTheDocument()
+      // No <select> anywhere in the table — this is the whole ticket.
+      expect(within(table).queryAllByRole('combobox')).toHaveLength(0)
+    })
+
+    it('BRGY-120 AC1 — the resting table offers no destructive control', async () => {
+      listReturns([admin, colleague])
+      renderPage(manage)
+
+      const table = await screen.findByRole('table')
+      expect(within(table).queryByRole('button', { name: /deactivate/i })).toBeNull()
+      expect(within(table).queryByText(/deactivate/i)).toBeNull()
+      // One neutral trigger instead, on the colleague's row only.
+      expect(within(table).getAllByRole('button', { name: /^Actions for/ })).toHaveLength(1)
+    })
+
+    it('BRGY-119 AC4 — the office filter is a labelled Select, not a bare one', async () => {
+      listReturns([admin, colleague])
+      renderPage(manage)
+
+      await screen.findByRole('table')
+      // Accessible name comes from a real <label>, visually hidden in the
+      // filter bar but present in the accessibility tree.
+      expect(screen.getByLabelText('Office')).toBeInTheDocument()
+    })
+
+    it('BRGY-119 AC2 — choosing Admin calls out the escalation, and only then', async () => {
+      listReturns([admin, colleague])
+      const user = userEvent.setup()
+      renderPage(manage)
+
+      await openRowMenu(user, 'clerk@baras.gov')
+      await chooseMenuItem(user, 'Change role…')
+      const dialog = await screen.findByRole('dialog', { name: 'Change role' })
+
+      expect(screen.queryByTestId('role-escalation-warning')).toBeNull()
+
+      await user.selectOptions(within(dialog).getByLabelText('New role'), 'admin')
+      expect(await screen.findByTestId('role-escalation-warning')).toHaveTextContent(
+        /deactivate and change the role of every account — including yours/
+      )
+
+      await user.selectOptions(within(dialog).getByLabelText('New role'), 'department_head')
+      await waitFor(() => expect(screen.queryByTestId('role-escalation-warning')).toBeNull())
+    })
+
+    it('BRGY-119 — confirming is refused until the role actually changes', async () => {
+      listReturns([admin, colleague])
+      const user = userEvent.setup()
+      renderPage(manage)
+
+      await openRowMenu(user, 'clerk@baras.gov')
+      await chooseMenuItem(user, 'Change role…')
+      const dialog = await screen.findByRole('dialog', { name: 'Change role' })
+
+      // Opens on the current role, so the confirm has nothing to apply yet.
+      expect(within(dialog).getByRole('button', { name: 'Change role' })).toBeDisabled()
+
+      await user.selectOptions(within(dialog).getByLabelText('New role'), 'admin')
+      expect(within(dialog).getByRole('button', { name: 'Change role' })).toBeEnabled()
+    })
+
+    it('BRGY-119 — a role the app no longer offers still renders in the dialog', async () => {
+      // BRGY-136 merged `barangay_staff` away. An account created before that
+      // migration must not have its role silently rewritten by the control.
+      const legacy = { ...colleague, role: 'barangay_staff' }
+      listReturns([admin, legacy])
+      const user = userEvent.setup()
+      renderPage(manage)
+
+      await openRowMenu(user, 'clerk@baras.gov')
+      await chooseMenuItem(user, 'Change role…')
+      const dialog = await screen.findByRole('dialog', { name: 'Change role' })
+
+      const select = within(dialog).getByLabelText('New role') as HTMLSelectElement
+      expect(select.value).toBe('barangay_staff')
+      expect(within(dialog).getByRole('option', { name: 'Barangay Staff' })).toBeInTheDocument()
+    })
+
+    it('BRGY-120 AC5 — reactivate is offered but not marked destructive', async () => {
+      listReturns([admin, { ...colleague, active: false }])
+      const user = userEvent.setup()
+      renderPage(manage)
+
+      await openRowMenu(user, 'clerk@baras.gov')
+
+      const item = await screen.findByRole('menuitem', { name: 'Reactivate account' })
+      expect(item).toHaveAttribute('data-tone', 'default')
+      expect(screen.queryByRole('menuitem', { name: 'Deactivate account' })).toBeNull()
     })
   })
 })

@@ -2,17 +2,20 @@ import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react'
 import { Link } from 'react-router-dom';
 import {
   ArrowLeft, Search, UserPlus, ShieldAlert, AlertCircle, CheckCircle2, RotateCcw, X,
+  UserCog, UserMinus, UserCheck,
 } from 'lucide-react';
 import { usePermissions } from '../../../hooks/usePermissions';
 import AppLayout from '../../../components/layout/AppLayout';
 import CreateAccountDialog from '../../../components/admin/CreateAccountDialog';
+import RoleDialog from '../../../components/admin/RoleDialog';
 import { ConfirmDialog } from '../../../components/ui/Dialog';
+import Menu from '../../../components/ui/Menu';
+import Select from '../../../components/ui/Select';
 import { TEXT_LINK } from '../../../components/ui/linkStyles';
 import {
   adminUserService,
   AdminUser,
   OFFICE_MODULES,
-  ROLES,
 } from '../../../services/adminUserService';
 
 const humanize = (value: string | null): string =>
@@ -25,7 +28,10 @@ const humanize = (value: string | null): string =>
  */
 type PendingAction =
   | { kind: 'toggle'; user: AdminUser }
-  | { kind: 'role'; user: AdminUser; role: string };
+  // BRGY-119: the role travels with the dialog, not with the pending action.
+  // It used to be captured from a `<select>`'s change event before anything was
+  // confirmed, which is what made granting Admin a single unconfirmed keystroke.
+  | { kind: 'role'; user: AdminUser };
 
 /**
  * A success confirmation (BRGY-132). `id` exists so a repeat of an identical
@@ -222,43 +228,16 @@ const AdminUsersPage: React.FC = () => {
     }
   };
 
-  // Both destructive actions go through the same confirm step (BRGY-127). The
-  // <select> is left uncontrolled-looking on purpose: `value` stays bound to
-  // `user.role`, so cancelling re-renders the old value straight back in.
-  const confirmPending = async () => {
-    if (!pending) return;
+  // Every mutation shares one failure path (BRGY-127): the server's sentence
+  // reaches the banner verbatim, and the list is reloaded before it is set.
+  const runMutation = async (mutate: () => Promise<void>) => {
     setError(null);
     // Drop any prior confirmation up front, so a failure never renders beneath
     // a success sentence describing a different account.
     setNotice(null);
     setIsConfirming(true);
     try {
-      if (pending.kind === 'role') {
-        const updated = await adminUserService.update(pending.user.id, { role: pending.role });
-        setPending(null);
-        await afterMutation(
-          updated ?? pending.user,
-          // "now has the X role", not "is now a X" — the roles are Admin, Staff
-          // and Department Head, which need "an", nothing, and "a" respectively.
-          // Naming the role as a role sidesteps the article and is the only
-          // phrasing that stays correct if a fourth role is ever added.
-          `${pending.user.email} now has the ${humanize(pending.role)} role.`
-        );
-      } else {
-        const makeActive = !pending.user.active;
-        const updated = await applyToggle(pending.user, makeActive);
-        setPending(null);
-        await afterMutation(
-          updated ?? pending.user,
-          makeActive
-            ? `Reactivated ${pending.user.email}. They can sign in again.`
-            : `Deactivated ${pending.user.email}. They can no longer sign in.`,
-          // Only the reversible action offers it. A role change is reversible
-          // too, but it is not a misclick in the way a row action is — it was
-          // chosen from a list and then confirmed by name.
-          undoToggle(pending.user, !makeActive)
-        );
-      }
+      await mutate();
     } catch (err) {
       // The server's sentence, not a generic one. On a refused lockout that
       // message *is* the recovery instruction — "make another account an
@@ -276,19 +255,43 @@ const AdminUsersPage: React.FC = () => {
     }
   };
 
-  // Copy for the confirmation. Each branch names the person and the
-  // consequence, because "Are you sure?" tells an admin nothing they did not
-  // already know when they clicked.
-  const confirmCopy = (action: PendingAction) => {
-    if (action.kind === 'role') {
-      return {
-        title: 'Change role',
-        description: `${action.user.email} will become ${humanize(action.role)}. Their access changes immediately.`,
-        confirmLabel: 'Change role',
-        tone: 'default' as const,
-      };
-    }
-    return action.user.active
+  const confirmRole = (user: AdminUser) => (role: string) =>
+    runMutation(async () => {
+      const updated = await adminUserService.update(user.id, { role });
+      setPending(null);
+      await afterMutation(
+        updated ?? user,
+        // "now has the X role", not "is now a X" — the roles are Admin, Staff
+        // and Department Head, which need "an", nothing, and "a" respectively.
+        // Naming the role as a role sidesteps the article and is the only
+        // phrasing that stays correct if a fourth role is ever added.
+        `${user.email} now has the ${humanize(role)} role.`
+      );
+    });
+
+  const confirmToggle = (user: AdminUser) => () =>
+    runMutation(async () => {
+      const makeActive = !user.active;
+      const updated = await applyToggle(user, makeActive);
+      setPending(null);
+      await afterMutation(
+        updated ?? user,
+        makeActive
+          ? `Reactivated ${user.email}. They can sign in again.`
+          : `Deactivated ${user.email}. They can no longer sign in.`,
+        // Only the reversible action offers it. A role change is reversible
+        // too, but it is not a misclick in the way a row action is — it was
+        // chosen from a list and then confirmed by name.
+        undoToggle(user, !makeActive)
+      );
+    });
+
+  // Copy for the deactivate/reactivate confirmation. It names the person and
+  // the consequence, because "Are you sure?" tells an admin nothing they did
+  // not already know when they clicked. The role change has its own dialog
+  // (BRGY-119) because it has to offer a choice as well as confirm one.
+  const confirmCopy = (action: { user: AdminUser }) =>
+    action.user.active
       ? {
           title: 'Deactivate account',
           description: `${action.user.email} will no longer be able to sign in.`,
@@ -301,7 +304,6 @@ const AdminUsersPage: React.FC = () => {
           confirmLabel: 'Reactivate account',
           tone: 'default' as const,
         };
-  };
 
   if (!canRead) {
     // Rendered inside the shell too, so someone who lands here by URL keeps the
@@ -388,14 +390,23 @@ const AdminUsersPage: React.FC = () => {
           />
         )}
 
-        {pending && (
+        {pending?.kind === 'toggle' && (
           <ConfirmDialog
             open
             onClose={() => setPending(null)}
-            onConfirm={confirmPending}
+            onConfirm={confirmToggle(pending.user)}
             isConfirming={isConfirming}
             testId="admin-users-confirm"
             {...confirmCopy(pending)}
+          />
+        )}
+
+        {pending?.kind === 'role' && (
+          <RoleDialog
+            user={pending.user}
+            onClose={() => setPending(null)}
+            onConfirm={confirmRole(pending.user)}
+            isConfirming={isConfirming}
           />
         )}
 
@@ -409,13 +420,21 @@ const AdminUsersPage: React.FC = () => {
               className="w-full pl-9 pr-3 py-2 text-sm border border-slate-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-brand-600"
             />
           </div>
-          <select
-            aria-label="Filter by office" value={officeFilter} onChange={(e) => setOfficeFilter(e.target.value)}
-            className="px-3 py-2 text-sm border border-slate-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-brand-600"
+          {/* BRGY-119 AC4/AC5: the last raw <select> on the page. It now shares
+              Input's geometry like every other field. `srOnlyLabel` keeps the
+              real <label> — and the accessible name — without adding a second
+              line to a filter bar where "All offices" already says what it is. */}
+          <Select
+            label="Office"
+            srOnlyLabel
+            id="admin-users-office-filter"
+            value={officeFilter}
+            onChange={(e) => setOfficeFilter(e.target.value)}
+            className="min-w-44"
           >
             <option value="">All offices</option>
             {OFFICE_MODULES.map((m) => <option key={m} value={m}>{humanize(m)}</option>)}
-          </select>
+          </Select>
         </div>
 
         {/* Table */}
@@ -456,21 +475,14 @@ const AdminUsersPage: React.FC = () => {
                     highlightId === user.id ? 'bg-brand-50' : 'hover:bg-slate-50/70'
                   }`}
                 >
-                  <td className="px-4 py-3 font-medium text-slate-800">{user.email}</td>
-                  <td className="px-4 py-3">
-                    {canManage ? (
-                      <select
-                        aria-label={`Role for ${user.email}`}
-                        value={user.role}
-                        onChange={(e) => setPending({ kind: 'role', user, role: e.target.value })}
-                        className="px-2 py-1 text-xs border border-slate-200 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-brand-600"
-                      >
-                        {ROLES.map((r) => <option key={r} value={r}>{humanize(r)}</option>)}
-                      </select>
-                    ) : humanize(user.role)}
-                  </td>
-                  <td className="px-4 py-3 text-slate-600">{humanize(user.office)}</td>
-                  <td className="px-4 py-3">
+                  <td className="px-4 py-2.5 font-medium text-slate-800">{user.email}</td>
+                  {/* Text, not a control (BRGY-119). Editing lives in the row
+                      menu; a cell that is always editable makes granting Admin
+                      an unconfirmed change event, and forty stacked selects
+                      turn a table you scan into a form you fill. */}
+                  <td className="px-4 py-2.5 text-slate-600">{humanize(user.role)}</td>
+                  <td className="px-4 py-2.5 text-slate-600">{humanize(user.office)}</td>
+                  <td className="px-4 py-2.5">
                     <span className={`inline-flex px-2 py-0.5 rounded-full text-[11px] font-semibold ${
                       user.active ? 'bg-accent-50 text-accent-700' : 'bg-slate-100 text-slate-500'
                     }`}>
@@ -482,18 +494,45 @@ const AdminUsersPage: React.FC = () => {
                     // disabled one with a tooltip. A disabled button still reads
                     // as "this is something you do here"; the server refuses it
                     // regardless, so the honest UI is to not offer it.
-                    <td className="px-4 py-3 text-right text-xs text-slate-400">This is you</td>
+                    <td className="px-4 py-2.5 text-right text-xs text-slate-400">This is you</td>
                   )}
                   {canManage && user.id !== userId && (
-                    <td className="px-4 py-3 text-right">
-                      <button
-                        onClick={() => setPending({ kind: 'toggle', user })}
-                        // Activate/Deactivate sat at danger-600 vs brand-700 — two
-                        // adjacent actions 11 degrees of hue apart. Green/red instead.
-                        className={`text-xs font-semibold underline underline-offset-2 ${user.active ? 'text-danger-600 hover:text-danger-700' : 'text-accent-700 hover:text-accent-800'}`}
-                      >
-                        {user.active ? 'Deactivate' : 'Reactivate'}
-                      </button>
+                    // py-1, not py-2.5: the 36px trigger is the tallest thing in
+                    // any row, so this cell alone decides row height. At py-2.5
+                    // the rows came out at 57px — taller than the 54px the
+                    // selects produced, which would have missed BRGY-119 AC3
+                    // while appearing to satisfy it.
+                    <td className="px-4 py-1">
+                      {/* BRGY-120: one neutral trigger per row. The destructive
+                          verb and its colour live inside the opened panel, so
+                          the resting table carries no danger red at all. */}
+                      <div className="flex justify-end">
+                        <Menu
+                          label={`Actions for ${user.email}`}
+                          testId={`user-menu-${user.id}`}
+                          items={[
+                            {
+                              label: 'Change role…',
+                              icon: <UserCog className="w-4 h-4" aria-hidden="true" />,
+                              onSelect: () => setPending({ kind: 'role', user }),
+                            },
+                            user.active
+                              ? {
+                                  label: 'Deactivate account',
+                                  tone: 'danger' as const,
+                                  icon: <UserMinus className="w-4 h-4" aria-hidden="true" />,
+                                  onSelect: () => setPending({ kind: 'toggle', user }),
+                                }
+                              : {
+                                  // Reactivate is not destructive, so it does not
+                                  // wear the danger treatment (BRGY-120 AC5).
+                                  label: 'Reactivate account',
+                                  icon: <UserCheck className="w-4 h-4" aria-hidden="true" />,
+                                  onSelect: () => setPending({ kind: 'toggle', user }),
+                                },
+                          ]}
+                        />
+                      </div>
                     </td>
                   )}
                 </tr>

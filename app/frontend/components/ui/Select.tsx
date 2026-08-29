@@ -10,6 +10,13 @@ interface SelectProps extends React.SelectHTMLAttributes<HTMLSelectElement> {
   invalid?: boolean;
   /** id of the element describing the error, when `invalid`. */
   describedBy?: string;
+  /**
+   * Renders the label to assistive technology only. For a filter bar, where a
+   * stacked label costs a whole row and the first option already names the
+   * control ("All offices"). The `<label>` is still real and still bound —
+   * this hides it, it does not drop it (BRGY-119).
+   */
+  srOnlyLabel?: boolean;
   children: React.ReactNode;
 }
 
@@ -32,12 +39,20 @@ const Select: React.FC<SelectProps> = ({
   id,
   invalid = false,
   describedBy,
+  srOnlyLabel = false,
   className = '',
   children,
   ...rest
 }) => (
-  <div className="space-y-1.5">
-    <label htmlFor={id} className="block text-xs font-semibold text-slate-600 uppercase tracking-wider">
+  <div className={srOnlyLabel ? '' : 'space-y-1.5'}>
+    <label
+      htmlFor={id}
+      className={
+        srOnlyLabel
+          ? 'sr-only'
+          : 'block text-xs font-semibold text-slate-600 uppercase tracking-wider'
+      }
+    >
       {label}
     </label>
     <div className="relative">
