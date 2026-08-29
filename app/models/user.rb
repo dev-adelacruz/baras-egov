@@ -17,6 +17,24 @@ class User < ApplicationRecord
   validates :email, presence: true
   validates :office, inclusion: { in: Permission::MODULES }, allow_nil: true
 
+  # Administrators who can still sign in. `active` matters as much as `admin`
+  # here: a deactivated admin cannot authenticate, so it does not count toward
+  # anybody being able to get back in.
+  scope :active_admins, -> { where(role: :admin, active: true) }
+
+  # Whether this account is the last administrator who can still sign in.
+  #
+  # One barangay, one deployment, and realistically one administrator — the
+  # barangay secretary, with no IT department behind them. If this account
+  # stops being an active admin there is nobody left to undo it, and recovery
+  # means `rails barangay:promote_admin` on a console someone has to be found
+  # to run (BRGY-127).
+  def sole_active_admin?
+    return false unless admin? && active?
+
+    self.class.active_admins.where.not(id: id).none?
+  end
+
   # The { module => [actions] } map this user is authorized for.
   def permissions
     Permission.for(self)

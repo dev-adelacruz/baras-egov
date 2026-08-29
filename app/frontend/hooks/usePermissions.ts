@@ -11,6 +11,10 @@ import { RootState } from '../state/store';
 export const usePermissions = () => {
   const permissions = useSelector((state: RootState) => state.user.permissions);
   const role = useSelector((state: RootState) => state.user.user?.role ?? null);
+  // Who is signed in, so a screen can tell "this row is you" from "this row is
+  // a colleague" (BRGY-127). Null while /api/v1/me is still in flight — callers
+  // must treat null as "unknown", never as "not me".
+  const userId = useSelector((state: RootState) => state.user.user?.id ?? null);
 
   const can = (module: string, action: string = 'read'): boolean =>
     (permissions[module] ?? []).includes(action);
@@ -20,5 +24,5 @@ export const usePermissions = () => {
 
   const accessibleModules = Object.keys(permissions);
 
-  return { can, canAccessModule, accessibleModules, role };
+  return { can, canAccessModule, accessibleModules, role, userId };
 };

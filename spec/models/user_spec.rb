@@ -37,4 +37,42 @@ RSpec.describe User do
       expect(staff.can?(:treasury, :read)).to be(false)
     end
   end
+
+  # BRGY-127. This predicate is the whole lockout guard — if it is wrong in the
+  # permissive direction the barangay loses access to its own system, and the
+  # recovery is a rake task somebody has to be found to run.
+  describe '#sole_active_admin?' do
+    it 'is true for the only administrator who can sign in' do
+      admin = create(:user, :admin)
+      create(:user, :staff)
+
+      expect(admin).to be_sole_active_admin
+    end
+
+    it 'is false once a second active administrator exists' do
+      admin = create(:user, :admin)
+      create(:user, :admin)
+
+      expect(admin).not_to be_sole_active_admin
+    end
+
+    it 'does not count a deactivated administrator as a second one' do
+      # The one that matters: a deactivated admin cannot authenticate, so it
+      # is no help to anybody locked out. Counting it would make the guard
+      # stand down at exactly the wrong moment.
+      admin = create(:user, :admin)
+      create(:user, :admin, active: false)
+
+      expect(admin).to be_sole_active_admin
+    end
+
+    it 'is false for a non-admin, however alone they are' do
+      expect(create(:user, :staff)).not_to be_sole_active_admin
+    end
+
+    it 'is false for an already-deactivated administrator' do
+      # Nothing left to protect: this account cannot sign in either way.
+      expect(create(:user, :admin, active: false)).not_to be_sole_active_admin
+    end
+  end
 end
