@@ -12,7 +12,7 @@ RSpec.describe 'Api::V1::Admin::Users', type: :request do
     end
 
     it 'forbids non-admins with 403' do
-      sign_in create(:user, :municipal_staff)
+      sign_in create(:user, :staff)
       get '/api/v1/admin/users'
       expect(response).to have_http_status(:forbidden)
     end
@@ -22,9 +22,9 @@ RSpec.describe 'Api::V1::Admin::Users', type: :request do
     before { sign_in create(:user, :admin) }
 
     describe 'GET /api/v1/admin/users' do
-      it 'lists accounts and filters by office and barangay' do
-        create(:user, :municipal_staff, email: 'registry@baras.gov', office: 'certifications')
-        create(:user, :barangay_staff, email: 'field@baras.gov', office: 'disaster_management', barangay: 'Barangay Uno')
+      it 'lists accounts and filters by office' do
+        create(:user, :staff, email: 'registry@baras.gov', office: 'certifications')
+        create(:user, :other_desk_staff, email: 'field@baras.gov', office: 'disaster_management')
 
         get '/api/v1/admin/users', params: { office: 'disaster_management' }
 
@@ -41,19 +41,34 @@ RSpec.describe 'Api::V1::Admin::Users', type: :request do
     end
 
     describe 'POST /api/v1/admin/users' do
-      it 'creates an account with an assigned role and scope' do
+      it 'creates an account with an assigned role and desk' do
         expect do
           post '/api/v1/admin/users', params: {
             user: {
               email: 'new.staff@baras.gov', password: 'password123',
-              role: 'barangay_staff', office: 'disaster_management', barangay: 'Barangay Dos'
+              role: 'staff', office: 'disaster_management'
             }
           }
         end.to change(User, :count).by(1)
 
         expect(response).to have_http_status(:created)
-        expect(json.dig(:data, :user, :role)).to eq('barangay_staff')
-        expect(json.dig(:data, :user, :barangay)).to eq('Barangay Dos')
+        expect(json.dig(:data, :user, :role)).to eq('staff')
+        expect(json.dig(:data, :user, :office)).to eq('disaster_management')
+        # BRGY-136: the column is gone, so the admin view must not carry it.
+        expect(json.dig(:data, :user)).not_to have_key(:barangay)
+      end
+
+      it 'ignores a barangay parameter rather than failing on it' do
+        # An old client (or a stale bookmark) can still send it. Strong params
+        # drop it silently; this pins that it does not 500 instead.
+        post '/api/v1/admin/users', params: {
+          user: {
+            email: 'legacy.client@baras.gov', password: 'password123',
+            role: 'staff', office: 'treasury', barangay: 'Barangay Uno'
+          }
+        }
+
+        expect(response).to have_http_status(:created)
       end
 
       it 'returns 422 for invalid input' do
@@ -64,7 +79,7 @@ RSpec.describe 'Api::V1::Admin::Users', type: :request do
 
     describe 'PATCH /api/v1/admin/users/:id' do
       it 'reassigns role and office' do
-        user = create(:user, :municipal_staff, office: 'certifications')
+        user = create(:user, :staff, office: 'certifications')
 
         patch "/api/v1/admin/users/#{user.id}", params: { user: { role: 'department_head', office: 'treasury' } }
 

@@ -152,7 +152,6 @@ describe('authService.fetchMe', () => {
               email: 'a@b.com',
               role: 'admin',
               permissions: { user_management: ['read', 'write'] },
-              data_scope: 'all',
             },
           },
         },

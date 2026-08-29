@@ -83,7 +83,6 @@ const initialState: UserState = {
   token: null,
   user: null,
   permissions: {},
-  dataScope: null,
   isLoading: false,
   error: null,
   errorKind: null
@@ -101,7 +100,6 @@ const userSlice = createSlice({
       state.token = null
       state.user = null
       state.permissions = {}
-      state.dataScope = null
     },
     clearError: (state) => {
       state.error = null
@@ -145,11 +143,10 @@ const userSlice = createSlice({
       state.token = null
       state.user = null
       state.permissions = {}
-      state.dataScope = null
       state.error = null
     })
 
-    // Fetch current user (role + permissions + scope) cases
+    // Fetch current user (role + permissions) cases
     builder.addCase(fetchCurrentUser.fulfilled, (state, action) => {
       const me = action.payload
       state.isSignedIn = true
@@ -157,15 +154,12 @@ const userSlice = createSlice({
         id: me.id,
         email: me.email,
         role: me.role,
-        office: me.office,
-        barangay: me.barangay
+        office: me.office
       }
       state.permissions = me.permissions ?? {}
-      state.dataScope = me.data_scope ?? null
     })
     builder.addCase(fetchCurrentUser.rejected, (state) => {
       state.permissions = {}
-      state.dataScope = null
     })
     builder.addCase(logoutUser.rejected, (state, action) => {
       state.isLoading = false

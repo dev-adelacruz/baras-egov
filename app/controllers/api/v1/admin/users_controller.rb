@@ -1,18 +1,18 @@
 # frozen_string_literal: true
 
 # Admin account management: provision, edit, deactivate and reactivate staff
-# accounts and assign their role/office/barangay scope. Every action is guarded
-# by the user_management module, which only admins hold (BRGY-38).
+# accounts and assign their role and office. Every action is guarded by the
+# user_management module, which only admins hold (BRGY-38).
 class Api::V1::Admin::UsersController < Api::V1::BaseController
   before_action :set_user, only: %i[update deactivate activate]
 
-  # GET /api/v1/admin/users — searchable/filterable by office and barangay.
+  # GET /api/v1/admin/users — searchable by email, filterable by office.
+  # BRGY-136 removed the barangay filter: one deployment, one barangay.
   def index
     authorize_module!(:user_management, :read)
 
     users = User.order(:email)
     users = users.where(office: params[:office]) if params[:office].present?
-    users = users.where(barangay: params[:barangay]) if params[:barangay].present?
     users = users.where('email ILIKE ?', "%#{params[:search]}%") if params[:search].present?
 
     render json: {
@@ -67,11 +67,11 @@ class Api::V1::Admin::UsersController < Api::V1::BaseController
   end
 
   def create_params
-    params.require(:user).permit(:email, :password, :role, :office, :barangay, :active)
+    params.require(:user).permit(:email, :password, :role, :office, :active)
   end
 
   def update_params
-    params.require(:user).permit(:role, :office, :barangay, :active)
+    params.require(:user).permit(:role, :office, :active)
   end
 
   def render_user(user, code:, message:, status: :ok)

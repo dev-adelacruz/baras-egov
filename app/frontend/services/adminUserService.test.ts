@@ -44,13 +44,13 @@ describe('adminUserService.create', () => {
     )
     vi.stubGlobal('fetch', fetchMock)
 
-    const user = await adminUserService.create({ email: 'new@b.com', password: 'password123', role: 'municipal_staff', office: 'treasury' })
+    const user = await adminUserService.create({ email: 'new@b.com', password: 'password123', role: 'staff', office: 'treasury' })
 
     const [url, init] = fetchMock.mock.calls[0]
     expect(url).toBe('/api/v1/admin/users')
     expect(init.method).toBe('POST')
     expect(JSON.parse(init.body)).toEqual({
-      user: { email: 'new@b.com', password: 'password123', role: 'municipal_staff', office: 'treasury' },
+      user: { email: 'new@b.com', password: 'password123', role: 'staff', office: 'treasury' },
     })
     expect(user.id).toBe(2)
   })

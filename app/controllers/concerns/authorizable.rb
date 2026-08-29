@@ -22,12 +22,12 @@ module Authorizable
     raise Forbidden, "Not authorized to #{action} #{mod}"
   end
 
-  # Apply the current user's data scope to a relation. Barangay-scoped users
-  # only ever see their own barangay's records; everyone else sees all.
-  def apply_data_scope(relation)
-    scope = current_user&.data_scope
-    scope.is_a?(Hash) ? relation.where(scope) : relation
-  end
+  # BRGY-136 removed `apply_data_scope`. It narrowed a relation to the current
+  # user's barangay, which only means something when one database holds several.
+  # This one holds one, so every caller would have been an identity function
+  # pretending to be a security boundary — worse than nothing, because it reads
+  # like the scoping is handled. Isolation here is the deployment, not a WHERE
+  # clause.
 
   private
 

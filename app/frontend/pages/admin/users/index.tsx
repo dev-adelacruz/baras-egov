@@ -161,17 +161,16 @@ const AdminUsersPage: React.FC = () => {
                 <th className="px-4 py-3">Email</th>
                 <th className="px-4 py-3">Role</th>
                 <th className="px-4 py-3">Office</th>
-                <th className="px-4 py-3">Barangay</th>
                 <th className="px-4 py-3">Status</th>
                 {canManage && <th className="px-4 py-3 text-right">Actions</th>}
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
               {isLoading && (
-                <tr><td colSpan={6} className="px-4 py-6 text-center text-slate-400">Loading…</td></tr>
+                <tr><td colSpan={5} className="px-4 py-6 text-center text-slate-400">Loading…</td></tr>
               )}
               {!isLoading && users.length === 0 && (
-                <tr><td colSpan={6} className="px-4 py-6 text-center text-slate-400">No accounts found.</td></tr>
+                <tr><td colSpan={5} className="px-4 py-6 text-center text-slate-400">No accounts found.</td></tr>
               )}
               {!isLoading && users.map((user) => (
                 <tr key={user.id} className="hover:bg-slate-50/70">
@@ -189,7 +188,6 @@ const AdminUsersPage: React.FC = () => {
                     ) : humanize(user.role)}
                   </td>
                   <td className="px-4 py-3 text-slate-600">{humanize(user.office)}</td>
-                  <td className="px-4 py-3 text-slate-600">{user.barangay ?? '—'}</td>
                   <td className="px-4 py-3">
                     <span className={`inline-flex px-2 py-0.5 rounded-full text-[11px] font-semibold ${
                       user.active ? 'bg-accent-50 text-accent-700' : 'bg-slate-100 text-slate-500'

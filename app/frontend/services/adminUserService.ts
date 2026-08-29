@@ -7,13 +7,11 @@ export interface AdminUser {
   email: string;
   role: string;
   office: string | null;
-  barangay: string | null;
   active: boolean;
 }
 
 export interface UserFilters {
   office?: string;
-  barangay?: string;
   search?: string;
 }
 
@@ -22,13 +20,11 @@ export interface CreateUserInput {
   password: string;
   role: string;
   office?: string;
-  barangay?: string;
 }
 
 export interface UpdateUserInput {
   role?: string;
   office?: string;
-  barangay?: string;
   active?: boolean;
 }
 
@@ -48,7 +44,6 @@ class AdminUserService {
   async list(filters: UserFilters = {}): Promise<AdminUser[]> {
     const params = new URLSearchParams();
     if (filters.office) params.set('office', filters.office);
-    if (filters.barangay) params.set('barangay', filters.barangay);
     if (filters.search) params.set('search', filters.search);
     const query = params.toString();
 
@@ -129,16 +124,16 @@ export const OFFICE_MODULES = [
   'user_management',
 ];
 
-export const ROLES = ['admin', 'department_head', 'municipal_staff', 'barangay_staff'];
-
 /**
- * Roles the create form offers. `barangay_staff` is deliberately absent:
- * `User` validates `barangay` present when the role is `barangay_staff`, and
- * BRGY-129 drops the Barangay field because a deployment serves one barangay.
- * Offering it would mean a dropdown option that returns 422 every time.
+ * Kept in sync with the `role` enum in app/models/user.rb.
  *
- * `ROLES` keeps the full list so existing accounts still render in the table
- * and in the per-row role select. The two lists converge when BRGY-136 merges
- * `municipal_staff` and `barangay_staff` into a single `staff` role.
+ * BRGY-136 merged `barangay_staff` and `municipal_staff` into a single `staff`
+ * role. The two already resolved to identical permissions — the only thing
+ * separating them was barangay scoping, which is gone because one deployment
+ * serves one barangay.
+ *
+ * There is no longer an `ASSIGNABLE_ROLES` subset. It existed solely to hide
+ * `barangay_staff`, which would have returned 422 every time it was chosen;
+ * every role in this list can now actually be assigned.
  */
-export const ASSIGNABLE_ROLES = ROLES.filter((r) => r !== 'barangay_staff');
+export const ROLES = ['admin', 'department_head', 'staff'];

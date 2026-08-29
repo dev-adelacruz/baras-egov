@@ -4,7 +4,7 @@ FactoryBot.define do
   factory :user do
     email { Faker::Internet.email }
     password { SecureRandom.hex }
-    role { :municipal_staff }
+    role { :staff }
     office { 'certifications' }
 
     trait :admin do
@@ -17,15 +17,17 @@ FactoryBot.define do
       office { 'certifications' }
     end
 
-    trait :municipal_staff do
-      role { :municipal_staff }
+    trait :staff do
+      role { :staff }
       office { 'certifications' }
     end
 
-    trait :barangay_staff do
-      role { :barangay_staff }
+    # A second desk, for specs that need two staff accounts that are not
+    # interchangeable. Replaces the old :barangay_staff trait, which existed to
+    # exercise a scoping split that BRGY-136 removed.
+    trait :other_desk_staff do
+      role { :staff }
       office { 'disaster_management' }
-      barangay { 'Barangay San Isidro' }
     end
   end
 end

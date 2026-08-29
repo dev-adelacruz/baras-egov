@@ -87,8 +87,7 @@ module Permission
     case user.role.to_sym
     when :admin            then admin_permissions
     when :department_head  then department_head_permissions(user)
-    when :municipal_staff  then office_permissions(user, WRITE_ACCESS)
-    when :barangay_staff   then office_permissions(user, WRITE_ACCESS)
+    when :staff            then office_permissions(user, WRITE_ACCESS)
     else {}
     end
   end

@@ -18,7 +18,6 @@ const renderLayout = (
         token: 't',
         user: { id: 1, email: 'admin@baras.gov', role: 'admin' },
         permissions,
-        dataScope: 'all' as const,
         isLoading: false,
         error: null,
         errorKind: null,

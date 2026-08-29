@@ -38,17 +38,17 @@ if Rails.env.local?
     # authority, not the system's. Seeded as a department head over the
     # documents desk so the two are not conflated during development.
     { email: 'captain@barangay.gov.local',      role: :department_head, office: 'certifications',  active: true },
-    { email: 'secretary@barangay.gov.local',    role: :municipal_staff, office: 'certifications',  active: true },
+    { email: 'secretary@barangay.gov.local',    role: :staff, office: 'certifications',  active: true },
     # The RBI encoder. `residents` is readable by every provisioned account but
     # writable only from this desk, so one seed has to sit here or nothing in
     # development can actually maintain the register.
-    { email: 'records@barangay.gov.local',      role: :municipal_staff, office: 'residents',       active: true },
-    { email: 'treasurer@barangay.gov.local',    role: :municipal_staff, office: 'treasury',        active: true },
-    { email: 'lupon@barangay.gov.local',        role: :municipal_staff, office: 'katarungan',      active: true },
-    { email: 'social@barangay.gov.local',       role: :municipal_staff, office: 'social_services', active: true },
+    { email: 'records@barangay.gov.local',      role: :staff, office: 'residents',       active: true },
+    { email: 'treasurer@barangay.gov.local',    role: :staff, office: 'treasury',        active: true },
+    { email: 'lupon@barangay.gov.local',        role: :staff, office: 'katarungan',      active: true },
+    { email: 'social@barangay.gov.local',       role: :staff, office: 'social_services', active: true },
     # Kept deactivated on purpose: /admin/users has an Active/Deactivated
     # column and a reactivate action, and neither is exercisable without one.
-    { email: 'former.staff@barangay.gov.local', role: :municipal_staff, office: 'certifications',  active: false }
+    { email: 'former.staff@barangay.gov.local', role: :staff, office: 'certifications',  active: false }
   ]
 
   removed = User.where(email: retired_emails).destroy_all.size

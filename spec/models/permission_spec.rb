@@ -14,7 +14,7 @@ RSpec.describe Permission do
     end
 
     it 'gives municipal staff write on their own office and read on the shared registers' do
-      staff = build(:user, :municipal_staff, office: 'treasury')
+      staff = build(:user, :staff, office: 'treasury')
 
       permissions = described_class.for(staff)
 
@@ -26,7 +26,7 @@ RSpec.describe Permission do
     end
 
     it 'keeps write access for staff whose own office is a shared register' do
-      encoder = build(:user, :municipal_staff, office: 'residents')
+      encoder = build(:user, :staff, office: 'residents')
 
       permissions = described_class.for(encoder)
 
@@ -46,7 +46,7 @@ RSpec.describe Permission do
     end
 
     it 'returns no permissions for staff without an office, not even the shared registers' do
-      staff = build(:user, :municipal_staff, office: nil)
+      staff = build(:user, :staff, office: nil)
 
       # An account with no desk is unprovisioned, and the resident register is
       # access-controlled by DILG mandate — the wrong thing to hand to an
@@ -57,7 +57,7 @@ RSpec.describe Permission do
 
   describe '.permits?' do
     it 'is true when the action is allowed and false otherwise' do
-      staff = build(:user, :municipal_staff, office: 'certifications')
+      staff = build(:user, :staff, office: 'certifications')
 
       expect(described_class.permits?(staff, :certifications, :write)).to be(true)
       expect(described_class.permits?(staff, :certifications, :delete)).to be(false)

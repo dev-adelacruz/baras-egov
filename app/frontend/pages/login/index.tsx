@@ -14,7 +14,7 @@ import { ShieldCheck, UserCog, KeyRound, CheckCircle2 } from 'lucide-react';
 // cannot currently do.
 const accessNotes = [
   { icon: UserCog, label: 'Accounts are issued by an administrator — there is no public sign-up' },
-  { icon: ShieldCheck, label: 'What you can see is scoped to your office and barangay' },
+  { icon: ShieldCheck, label: 'What you can see is scoped to your office' },
   { icon: KeyRound, label: 'Forgotten passwords can be reset from this page' },
 ];
 

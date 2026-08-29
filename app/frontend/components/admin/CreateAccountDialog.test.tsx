@@ -1,7 +1,7 @@
 import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import CreateAccountDialog from './CreateAccountDialog'
-import { adminUserService, ASSIGNABLE_ROLES, OFFICE_MODULES } from '../../services/adminUserService'
+import { adminUserService, ROLES, OFFICE_MODULES } from '../../services/adminUserService'
 
 /**
  * BRGY-129. Each test names the acceptance criterion it covers, because the
@@ -18,9 +18,8 @@ vi.mock('../../services/adminUserService', async (importActual) => {
 const created = {
   id: 9,
   email: 'juan@example.gov.ph',
-  role: 'municipal_staff',
+  role: 'staff',
   office: 'certifications',
-  barangay: null,
   active: true,
 }
 
@@ -218,12 +217,16 @@ describe('CreateAccountDialog', () => {
     expect(panel.className).toMatch(/sm:rounded-2xl/)
   })
 
-  it('does not offer barangay_staff — it would fail server validation', () => {
+  // BRGY-136 merged barangay_staff into staff, so every offered role can now
+  // actually be assigned — there is no longer an unassignable option to hide.
+  it('offers every role, and no Barangay field', () => {
     setup()
     const role = screen.getByLabelText('Role')
     expect(within(role).queryByRole('option', { name: 'Barangay Staff' })).toBeNull()
-    expect(within(role).getByRole('option', { name: 'Municipal Staff' })).toBeInTheDocument()
-    // And no Barangay field at all — one deployment serves one barangay.
+    expect(within(role).queryByRole('option', { name: 'Municipal Staff' })).toBeNull()
+    expect(within(role).getByRole('option', { name: 'Staff' })).toBeInTheDocument()
+    expect(within(role).getAllByRole('option')).toHaveLength(ROLES.length)
+    // One deployment serves one barangay, so the field has nothing to say.
     expect(screen.queryByLabelText(/barangay/i)).toBeNull()
   })
 
@@ -238,31 +241,31 @@ describe('CreateAccountDialog', () => {
     expect(createMock()).toHaveBeenCalledWith({
       email: 'juan@example.gov.ph',
       password: 'sekretong-lihim',
-      role: 'municipal_staff',
+      role: 'staff',
       office: 'certifications',
     })
   })
 
-  // Regression guard. The first cut of this dialog defaulted to
-  // ASSIGNABLE_ROLES[0], which is 'admin' — so an untouched form provisioned a
-  // full administrator, where the form it replaced defaulted to staff.
+  // Regression guard. The first cut of this dialog defaulted to ROLES[0], which
+  // is 'admin' — so an untouched form provisioned a full administrator, where
+  // the form it replaced defaulted to staff.
   it('defaults to the least-privileged role, not admin', () => {
     setup()
-    expect(screen.getByLabelText('Role')).toHaveValue('municipal_staff')
+    expect(screen.getByLabelText('Role')).toHaveValue('staff')
   })
 
   // Both defaults are named rather than indexed. BRGY-137 reordered
   // OFFICE_MODULES and silently moved the office default from one desk to
-  // another; before that, ASSIGNABLE_ROLES[0] silently made every new account
-  // an admin. A positional default is a hidden dependency on list order.
+  // another; before that, ROLES[0] silently made every new account an admin.
+  // A positional default is a hidden dependency on list order.
   it('takes its defaults by name, not by list position', () => {
     setup()
     expect(screen.getByLabelText('Office')).toHaveValue('certifications')
-    expect(ASSIGNABLE_ROLES[0]).toBe('admin')
+    expect(ROLES[0]).toBe('admin')
     expect(OFFICE_MODULES[0]).toBe('residents')
     // Neither list's first entry is what the form defaults to — which is the
     // whole point. If these ever coincide, the guard has stopped guarding.
-    expect(screen.getByLabelText('Role')).not.toHaveValue(ASSIGNABLE_ROLES[0])
+    expect(screen.getByLabelText('Role')).not.toHaveValue(ROLES[0])
     expect(screen.getByLabelText('Office')).not.toHaveValue(OFFICE_MODULES[0])
   })
 

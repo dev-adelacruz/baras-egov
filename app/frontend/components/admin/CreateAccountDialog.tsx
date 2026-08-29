@@ -7,7 +7,7 @@ import Select from '../ui/Select';
 import {
   adminUserService,
   AdminUser,
-  ASSIGNABLE_ROLES,
+  ROLES,
   OFFICE_MODULES,
 } from '../../services/adminUserService';
 
@@ -50,10 +50,10 @@ type FieldErrors = Partial<Record<FieldName, string>>;
 const emptyForm = {
   email: '',
   password: '',
-  // Least privilege, and named rather than taken as ASSIGNABLE_ROLES[0] — that
+  // Least privilege, and named rather than taken as ROLES[0] — that
   // index is `admin`, so an untouched form would provision an administrator.
   // Whoever is creating the account has to choose to elevate it.
-  role: 'municipal_staff',
+  role: 'staff',
   // Named for the same reason. This was OFFICE_MODULES[0] until BRGY-137
   // reordered that list, which moved the default from one desk to another
   // without anyone touching this file — a positional default is a silent
@@ -388,7 +388,7 @@ const CreateAccountDialog: React.FC<CreateAccountDialogProps> = ({
               onChange={(e) => setField('role', e.target.value)}
               disabled={isSubmitting}
             >
-              {ASSIGNABLE_ROLES.map((r) => (
+              {ROLES.map((r) => (
                 <option key={r} value={r}>
                   {humanize(r)}
                 </option>
