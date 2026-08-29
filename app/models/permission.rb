@@ -54,7 +54,7 @@ module Permission
 
   module_function
 
-  # The permission map for a user: { "civil_registry" => [:read, :write], ... }.
+  # The permission map for a user: { "certifications" => [:read, :write], ... }.
   # Modules the user cannot touch are omitted entirely.
   def for(user)
     case user.role.to_sym
