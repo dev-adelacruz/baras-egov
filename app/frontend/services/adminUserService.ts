@@ -41,7 +41,10 @@ const parseError = async (response: Response, fallback: string): Promise<never> 
 };
 
 class AdminUserService {
-  async list(filters: UserFilters = {}): Promise<AdminUser[]> {
+  // `signal` lets the caller abort a superseded search (BRGY-131). Aborting is
+  // preferable to merely ignoring the response: this product is built for LGU
+  // connectivity, where the request that never finishes is the one that costs.
+  async list(filters: UserFilters = {}, signal?: AbortSignal): Promise<AdminUser[]> {
     const params = new URLSearchParams();
     if (filters.office) params.set('office', filters.office);
     if (filters.search) params.set('search', filters.search);
@@ -50,6 +53,7 @@ class AdminUserService {
     const response = await fetch(`${BASE_URL}${query ? `?${query}` : ''}`, {
       method: 'GET',
       headers: authHeaders(),
+      signal,
     });
     if (!response.ok) return parseError(response, 'Failed to load accounts');
 

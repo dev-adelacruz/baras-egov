@@ -55,16 +55,29 @@ const UNDO_WINDOW_MS = 15_000;
 // list, short enough not to read as a persistent state on the account.
 const HIGHLIGHT_MS = 2_500;
 
+// BRGY-131. Typing "treasury" used to issue eight requests, one per keystroke.
+const SEARCH_DEBOUNCE_MS = 300;
+
+// Below this, the search is simply not applied — a single character matches
+// most of the roster, so the round-trip buys nothing. Typing the first letter
+// therefore issues no request at all.
+const MIN_SEARCH_CHARS = 2;
+
 const AdminUsersPage: React.FC = () => {
   const { can, userId } = usePermissions();
   const canRead = can('user_management', 'read');
   const canManage = can('user_management', 'manage');
 
   const [users, setUsers] = useState<AdminUser[]>([]);
+  /** What is in the box, updated on every keystroke. */
   const [search, setSearch] = useState('');
+  /** What has actually been sent — debounced, and blank below the minimum. */
+  const [query, setQuery] = useState('');
   const [officeFilter, setOfficeFilter] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  /** Distinguishes "no accounts match" from "the first load has not finished". */
+  const [hasLoaded, setHasLoaded] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
   const [pending, setPending] = useState<PendingAction | null>(null);
   const [isConfirming, setIsConfirming] = useState(false);
@@ -73,6 +86,8 @@ const AdminUsersPage: React.FC = () => {
   const [highlightId, setHighlightId] = useState<number | null>(null);
 
   const noticeSeq = useRef(0);
+  const requestSeq = useRef(0);
+  const inFlight = useRef<AbortController | null>(null);
   const undoTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const highlightTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const rowRefs = useRef<Record<number, HTMLTableRowElement | null>>({});
@@ -81,31 +96,72 @@ const AdminUsersPage: React.FC = () => {
     () => () => {
       if (undoTimer.current) clearTimeout(undoTimer.current);
       if (highlightTimer.current) clearTimeout(highlightTimer.current);
+      inFlight.current?.abort();
     },
     []
   );
+
+  // What the box is worth as a query: blank until it holds enough to narrow
+  // anything. Derived rather than stored, so the "is this long enough" rule
+  // lives in exactly one place.
+  const effectiveQuery = search.trim().length >= MIN_SEARCH_CHARS ? search.trim() : '';
+
+  // True from the first keystroke until the results for it have painted —
+  // covering the debounce window as well as the request, so the field does not
+  // sit inert for 300ms looking like nothing was typed.
+  const isSearching = effectiveQuery !== query || (isLoading && hasLoaded);
+
+  // Debounce. The guard matters: typing the first character leaves
+  // `effectiveQuery` at '' — unchanged — so no timer is armed and no request is
+  // ever issued for it (AC3). Deleting back down to one character *does* change
+  // it, from "tr" to "", which correctly restores the unfiltered list.
+  useEffect(() => {
+    if (effectiveQuery === query) return undefined;
+    const timer = setTimeout(() => setQuery(effectiveQuery), SEARCH_DEBOUNCE_MS);
+    return () => clearTimeout(timer);
+  }, [effectiveQuery, query]);
 
   // Returns the rows it loaded, so a caller that has just mutated an account can
   // tell whether that account is in the list the admin is actually looking at.
   // `null` means the load itself failed — distinct from "loaded, and it is not
   // there", which is a real answer the confirmation needs to report.
   const load = useCallback(async (): Promise<AdminUser[] | null> => {
+    // Supersede anything still in the air. Without this, a slow response for
+    // "trea" landing after a fast one for "treasury" repaints the table with
+    // results that do not match the box — `setUsers` otherwise honours whichever
+    // promise settles last rather than whichever query is current.
+    inFlight.current?.abort();
+    const controller = new AbortController();
+    inFlight.current = controller;
+    const id = (requestSeq.current += 1);
+
     setIsLoading(true);
     setError(null);
     try {
-      const fresh = await adminUserService.list({
-        search: search || undefined,
-        office: officeFilter || undefined,
-      });
+      const fresh = await adminUserService.list(
+        { search: query || undefined, office: officeFilter || undefined },
+        controller.signal
+      );
+      // Belt and braces: abort covers the network, this covers the case where a
+      // response had already been delivered before the abort landed.
+      if (id !== requestSeq.current) return null;
       setUsers(fresh);
+      setHasLoaded(true);
       return fresh;
     } catch (err) {
+      // An abort is this component's own doing, not a failure to report.
+      if (controller.signal.aborted || (err instanceof Error && err.name === 'AbortError')) {
+        return null;
+      }
       setError(err instanceof Error ? err.message : 'Failed to load accounts.');
+      setHasLoaded(true);
       return null;
     } finally {
-      setIsLoading(false);
+      // Only the newest request owns the spinner; a superseded one turning it
+      // off would clear it while its replacement is still running.
+      if (id === requestSeq.current) setIsLoading(false);
     }
-  }, [search, officeFilter]);
+  }, [query, officeFilter]);
 
   useEffect(() => {
     if (canRead) {
@@ -417,8 +473,18 @@ const AdminUsersPage: React.FC = () => {
             <input
               type="text" placeholder="Search by email" aria-label="Search"
               value={search} onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-9 pr-3 py-2 text-sm border border-slate-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-brand-600"
+              aria-describedby="admin-users-search-hint"
+              className="w-full pl-9 pr-24 py-2 text-sm border border-slate-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-brand-600"
             />
+            {/* The only in-flight signal while typing (BRGY-131 AC4). It sits in
+                the field rather than over the table, so the rows never move. */}
+            <span
+              id="admin-users-search-hint"
+              role="status"
+              className="absolute top-1/2 -translate-y-1/2 right-3 text-xs font-medium text-slate-400"
+            >
+              {isSearching ? 'Searching…' : ''}
+            </span>
           </div>
           {/* BRGY-119 AC4/AC5: the last raw <select> on the page. It now shares
               Input's geometry like every other field. `srOnlyLabel` keeps the
@@ -439,7 +505,10 @@ const AdminUsersPage: React.FC = () => {
 
         {/* Table */}
         <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-x-auto">
-          <table className="w-full text-sm">
+          {/* aria-busy rather than a swapped-in "Loading…" row: the rows stay
+              put while a refetch is in flight, so the list no longer flickers
+              on every keystroke (BRGY-131 AC4). */}
+          <table className="w-full text-sm" aria-busy={isLoading}>
             <thead>
               <tr className="text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wider border-b border-slate-100">
                 <th className="px-4 py-3">Email</th>
@@ -450,13 +519,19 @@ const AdminUsersPage: React.FC = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
-              {isLoading && (
+              {/* Only the very first load gets a placeholder row. Every refetch
+                  after that keeps the previous rows on screen — replacing them
+                  mid-type is what made the table flicker. */}
+              {!hasLoaded && isLoading && (
                 <tr><td colSpan={5} className="px-4 py-6 text-center text-slate-400">Loading…</td></tr>
               )}
-              {!isLoading && users.length === 0 && (
+              {/* Not while an error is up: "No accounts found." is a claim about
+                  the roster, and a request that failed has not established it.
+                  The banner already says what happened. */}
+              {hasLoaded && !error && users.length === 0 && (
                 <tr><td colSpan={5} className="px-4 py-6 text-center text-slate-400">No accounts found.</td></tr>
               )}
-              {!isLoading && users.map((user) => (
+              {users.map((user) => (
                 <tr
                   key={user.id}
                   ref={(el) => {
