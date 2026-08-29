@@ -112,7 +112,7 @@ ENV_BASE_URL={value} | E2E_FRAMEWORK={value} | BROWSER_AVAILABLE={true|false}
 
 ## Phase 2A — Execute (Feature Mode)
 
-Group the ACs into four buckets:
+Group the ACs into four buckets, then run the **visual bucket** (below) if the PR touches components.
 
 1. **Test-runner ACs** — covered by an existing `*_spec.rb`, `*.test.ts`, etc. Run via `BE_TEST_CMD` / `FE_TEST_CMD` / `E2E_RUN_CMD`.
 2. **DB-query ACs** — covered by a `bin/rails runner` (or env equivalent) read-only assertion. Run via `DB_QUERY_CMD` per **Shared: Environment Resolution**.
@@ -231,6 +231,44 @@ On exit 2, read the driver's stderr line before reporting. `login failed:` means
 
 Also check `stepsRun` on any stepped URL: a value like `"3/6"` means the flow broke partway, and the step index in `failures[]` names exactly where. Quote it — "step[3] click (button:has-text('Save')): timeout" is an actionable bug report; "the save didn't work" is not.
 
+### Visual bucket (BRGY-140)
+
+**Fires when `CHANGED_FILES` touches `app/frontend/components/**`.** Not gated on the AC list, because the AC list is exactly what cannot catch this.
+
+BRGY-139 shipped a modal rounded on top and square on the bottom. `dev-agent verify` said SAFE TO MERGE, this mode said PASS on 10/10 ACs with 34/34 driver steps, 114 unit tests passed, `tsc` was clean. A human spotted it in about two seconds.
+
+Nothing was wrong with the gates. **Nothing in the pipeline ever asked whether it looked right.** Acceptance criteria are a closed list written before the artifact exists, so they cannot contain the defect nobody anticipated — BRGY-129's ten criteria covered labels, autocomplete, focus, error placement and breakpoints, and not one said "corners". Visual defects are an open set; catching them needs an open-ended pass with no checklist.
+
+Add a `visual` block to the URL that renders the changed component **in the state a user sees it in** — after the steps that open it, not on bare page load:
+
+```json
+{
+  "name": "create-account-dialog",
+  "path": "/admin/users",
+  "steps": [
+    { "action": "click",   "selector": "button:has-text('New account')" },
+    { "action": "waitFor", "selector": "#create-account-email", "state": "visible" },
+    { "action": "waitMs",  "ms": 500 }
+  ],
+  "visual": {
+    "scope": "[role=dialog]",
+    "corners": true,
+    "invariant": true,
+    "contrastSheet": true
+  }
+}
+```
+
+| Probe | What it does | Verdict effect |
+|---|---|---|
+| `corners` | Samples rendered pixels either side of each declared arc. A corner that declares a radius and renders square **fails**. | 🔴 FAIL — not a warning |
+| `invariant` | Lint rule: element with a radius and `overflow: visible` whose opaque, square-cornered descendant reaches that corner. Names the ancestor/descendant pair by selector. | 🔴 FAIL |
+| `contrastSheet` | Writes the four corners side by side at 6× into the evidence dir. | Evidence only |
+
+**Review the contrast sheets before opening the AC list.** This ordering is the point, not housekeeping. Screenshots *were* captured and reviewed during BRGY-129 and did not help, for three reasons: the capture downscaled a 16px radius to a handful of pixels; a checklist in hand frames what gets looked at; and shown a single image, "nothing is wrong here" is the default read. Four corners side by side converts noticing an absence into spotting the odd one out.
+
+If the probe cannot run it reports `visual: probe could not run` and **fails** — a visual bucket that silently did nothing reads as "it looked fine", which is the failure this exists to remove.
+
 ### Map-bearing URL guardrail
 
 If the PR diff touches geojson / region / map code (heuristic: `**/*geojson*`, `**/regions/**`, `**/*map*` in `CHANGED_FILES`) OR any URL matches `/map/*` / `/map-data/*`, the driver MUST be called with `expectMap: true` on those URLs. If `expectMap` is omitted on a map-bearing URL, the AC is downgraded to 🟡 PARTIAL with the explicit note "browser map check skipped" in Blocking Findings.
@@ -320,9 +358,12 @@ What was actually exercised — name anything that was not:
 | DB queries | ✅ | 3 read-only assertions |
 | Browser — navigation | ✅ | 4 URLs, 0 console errors |
 | Browser — interaction | ❌ | no mutation ACs in this PR |
+| Visual | ✅ | 1 radius-bearing element probed, 4 corners, contrast sheet written |
 | Auth-gated surfaces | ⏸ | browser_login not configured |
 
 A ❌ or ⏸ row is not a footnote — if a surface the PR touches went unexercised, that belongs in the verdict justification too.
+
+The **Visual** row is `❌ not run` when the PR touches `app/frontend/components/**` and no `visual` block was configured. That combination caps the verdict at 🟡 PARTIAL, the same discipline as the mutation-path guardrail: BRGY-139 passed every gate precisely because nothing looked.
 
 ### Blocking Findings (only on FAIL)
 - {plain-text finding — quote driver `failures[]` verbatim, including the step index}

@@ -85,6 +85,17 @@
  *       { "name": "coverage-page", "path": "/map/coverage",       "expectMap": false },
  *       { "name": "request-edit", "path": "/requests/abc123/edit",     "expectText": "Edit your request" },
  *       {
+ *         "name": "dialog-open",                             // BRGY-140 — visual probes, run after steps
+ *         "path": "/admin/users",
+ *         "steps": [ { "action": "click", "selector": "button:has-text('New account')" } ],
+ *         "visual": {
+ *           "scope": "[role=dialog]",                        // optional subtree
+ *           "corners": true,                                 // rendered-pixel corner probe; a square arc FAILS
+ *           "invariant": true,                               // radius + overflow:visible + opaque square child
+ *           "contrastSheet": true                            // evidence image, never a gate
+ *         }
+ *       },
+ *       {
  *         "name": "request-edit-save",
  *         "path": "/admin/requests",
  *         "settleMs": 500,
@@ -519,6 +530,7 @@ async function runOne(ctx, urlSpec, cfg, runIndex) {
 
   const t0 = Date.now();
   let nav, finalStatus = null, mapReady = false, mapPolygonCount = 0;
+  let visualTargets = null, visualArtifacts = [];
   const failures = [];
   const extraShots = [];
   let stepsRun = 0;
@@ -565,6 +577,28 @@ async function runOne(ctx, urlSpec, cfg, runIndex) {
       // listeners below see it. This is the window in which a bad HTTP verb,
       // a 422, or a 500 on submit actually shows up.
       await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {});
+    }
+
+    // BRGY-140. Runs after the steps, so a component that only exists once a
+    // dialog is open is probed in the state a person actually sees it in.
+    // Scored pass only — the warmup pass has no steps, so its DOM is not the
+    // one under test, and screenshotting it would just cost time.
+    if (urlSpec.visual && runIndex === 1) {
+      try {
+        const { runVisual } = require('./visual-probe.cjs');
+        const v = await runVisual(page, urlSpec.visual, cfg, `${stamp()}-${urlSpec.name || 'page'}`);
+        visualTargets = v.targetCount;
+        visualArtifacts = v.artifacts || [];
+        extraShots.push(...visualArtifacts);
+        // A squared corner FAILS the bucket rather than warning. A visual check
+        // that only warns is a visual check nobody reads.
+        for (const f of v.failures) failures.push(f + (v.truncated || ''));
+      } catch (e) {
+        // Never a silent skip: a visual bucket that quietly did nothing reads
+        // as "it looked fine", which is exactly the failure this ticket exists
+        // to remove.
+        failures.push(`visual: probe could not run — ${String(e.message).slice(0, 160)}`);
+      }
     }
 
     if (urlSpec.expectMap) {
@@ -717,6 +751,8 @@ async function runOne(ctx, urlSpec, cfg, runIndex) {
     mapReady: urlSpec.expectMap ? mapReady : null,
     mapPolygonCount: urlSpec.expectMap ? mapPolygonCount : null,
     stepsRun: Array.isArray(urlSpec.steps) ? `${stepsRun}/${urlSpec.steps.length}` : null,
+    visualTargets: urlSpec.visual ? visualTargets : null,
+    visualArtifacts: urlSpec.visual ? visualArtifacts : null,
     screenshot,
     screenshots: extraShots,
     failures,

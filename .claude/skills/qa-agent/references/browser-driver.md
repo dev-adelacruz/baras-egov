@@ -188,6 +188,32 @@ Navigation-only verification returned PASS: the page loaded fine, and the PATCH 
 
 **Rule: if a PR changes a create/update/delete path, the driver config must include a `steps` block that exercises it.** A verify run that touches mutation code with no interactive step is capped at 🟡 PARTIAL, with "mutation path not exercised" recorded in Blocking Findings. Same discipline as the map guardrail below.
 
+## Visual probes (`visual`)
+
+Implemented in `scripts/visual-probe.cjs`, run after a URL's steps on the scored pass only, so a component that exists only once a dialog is open is probed in the state a person sees it in.
+
+```json
+"visual": {
+  "scope": "[role=dialog]",   // optional — limit to a subtree
+  "corners": true,            // default true
+  "invariant": true,          // default true
+  "contrastSheet": false,     // default false — writes evidence, never gates
+  "tolerance": 24,            // corner probe colour distance
+  "maxTargets": 12,           // largest N radius-bearing elements
+  "minSize": 60               // ignore anything smaller
+}
+```
+
+**`corners`** samples two rendered pixels per declared arc: one at `0.25r` in from both edges (geometrically *outside* the arc, so a rounded corner shows the backdrop) and one at `1.2r` along the diagonal (always inside, so it shows the fill). Rounded → the two differ. Square → they match, because the same opaque thing paints both. A corner that declares a radius and renders square **fails the URL**.
+
+Judging each corner against itself matters. An earlier cut compared the four corners to each other and required agreement — which fails a *correct* build, because the scrim behind a modal sits over a page that is not a flat colour (the four corners legitimately read 113, 127 and 147). Local comparison removes the assumption: gradients, shadows and busy backdrops all move both samples together.
+
+**Sample rendered pixels, never `document.elementFromPoint`.** It hit-tests rectangular border boxes, so it reports an element at a corner that element does not visually occupy — it produced a confident false positive on the first cut of this probe.
+
+**`invariant`** is a lint rule with no pixels involved: an element with a radius and `overflow: visible` cannot clip its children, so an opaque, square-cornered descendant reaching that corner will paint over the arc. It names the ancestor/descendant pair and the fix. Its colour test is deliberately colour-space agnostic — matching only `rgb()` silently ignores every Tailwind v4 background, which are `oklch()`, and a colour-parsing miss that reads as "no finding" is worse than no probe.
+
+**`contrastSheet`** writes the four corners side by side at 6× nearest-neighbour into the evidence dir. Evidence only, never a gate. Review it *before* opening the AC list — a checklist in hand frames what you see, and shown one image the default read is "nothing is wrong here".
+
 ## Built-in assertions (hard fail per URL)
 
 The driver's `verdict` is `FAIL` for any URL where:
