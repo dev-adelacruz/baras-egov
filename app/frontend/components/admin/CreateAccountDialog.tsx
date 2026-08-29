@@ -54,7 +54,13 @@ const emptyForm = {
   // index is `admin`, so an untouched form would provision an administrator.
   // Whoever is creating the account has to choose to elevate it.
   role: 'municipal_staff',
-  office: OFFICE_MODULES[0],
+  // Named for the same reason. This was OFFICE_MODULES[0] until BRGY-137
+  // reordered that list, which moved the default from one desk to another
+  // without anyone touching this file — a positional default is a silent
+  // dependency on list order. Certifications is the busiest desk in a barangay
+  // hall, so it is the useful landing spot; getting it wrong costs a reassign,
+  // not a privilege escalation.
+  office: 'certifications',
 };
 
 /**

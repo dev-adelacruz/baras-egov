@@ -108,15 +108,20 @@ class AdminUserService {
 
 export const adminUserService = new AdminUserService();
 
-// Kept in sync with Permission::MODULES on the backend.
+// Kept in sync with Permission::MODULES on the backend (app/models/permission.rb).
+// These are the barangay's own desks — BRGY-137 replaced the municipal org
+// chart this used to mirror. Order matches the Ruby constant so the two can be
+// diffed by eye.
 export const OFFICE_MODULES = [
-  'civil_registry',
+  'residents',
+  'certifications',
+  'clearances',
+  'katarungan',
   'treasury',
-  'business_permits',
-  'social_welfare',
-  'disaster_management',
+  'social_services',
   'health',
-  'documents',
+  'disaster_management',
+  'legislative',
   'reports',
   'user_management',
 ];

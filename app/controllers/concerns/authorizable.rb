@@ -3,7 +3,7 @@
 # Server-side authorization for API controllers.
 #
 # Include in any authenticated controller and guard actions with
-# `authorize_module!(:civil_registry, :write)`. Denied requests are logged and
+# `authorize_module!(:certifications, :write)`. Denied requests are logged and
 # rendered as 403 — UI hiding on the frontend is never the enforcement point.
 module Authorizable
   extend ActiveSupport::Concern

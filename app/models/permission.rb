@@ -9,18 +9,41 @@
 # A user's permissions are the map { module => [actions] } returned by
 # `Permission.for(user)`. Actions are: :read, :write, :delete, :manage.
 module Permission
-  # Functional modules, aligned with the LGU offices in the PRD.
+  # The barangay's functional desks (BRGY-137).
+  #
+  # This list was previously an LGU *municipal* org chart — civil_registry,
+  # business_permits, a full health unit. A barangay runs none of those: birth,
+  # death and marriage registration is the Municipal Civil Registrar's, mayor's
+  # permits are the BPLO's, and the Rural Health Unit is municipal. The product
+  # serves one barangay per deployment, so the list is re-derived from what a
+  # barangay is actually mandated to do under RA 7160.
+  #
+  # Changing this constant changes authorization server-side, the /api/v1/me
+  # payload, and the office a staff account can be assigned to. Keep it in sync
+  # with OFFICE_MODULES in app/frontend/services/adminUserService.ts.
   MODULES = %w[
-    civil_registry
+    residents
+    certifications
+    clearances
+    katarungan
     treasury
-    business_permits
-    social_welfare
-    disaster_management
+    social_services
     health
-    documents
+    disaster_management
+    legislative
     reports
     user_management
   ].freeze
+
+  # Retired in BRGY-137, kept only so the data migration and any straggling
+  # record can be recognised rather than silently failing validation. Never
+  # grant permissions against these.
+  RETIRED_MODULES = {
+    'civil_registry' => 'certifications',   # registration is municipal; the barangay attests
+    'business_permits' => 'clearances',     # barangay issues the clearance, not the permit
+    'social_welfare' => 'social_services',  # renamed
+    'documents' => 'certifications'         # split into certifications + clearances
+  }.freeze
 
   ACTIONS = %i[read write delete manage].freeze
 
@@ -31,7 +54,7 @@ module Permission
 
   module_function
 
-  # The permission map for a user: { "civil_registry" => [:read, :write], ... }.
+  # The permission map for a user: { "certifications" => [:read, :write], ... }.
   # Modules the user cannot touch are omitted entirely.
   def for(user)
     case user.role.to_sym

@@ -30,8 +30,8 @@ RSpec.describe User do
     end
 
     it 'delegates #can? to the permission policy' do
-      staff = build(:user, :municipal_staff, office: 'civil_registry')
-      expect(staff.can?(:civil_registry, :write)).to be(true)
+      staff = build(:user, :municipal_staff, office: 'certifications')
+      expect(staff.can?(:certifications, :write)).to be(true)
       expect(staff.can?(:treasury, :read)).to be(false)
     end
   end

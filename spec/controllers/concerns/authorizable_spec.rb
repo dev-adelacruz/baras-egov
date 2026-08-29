@@ -7,7 +7,7 @@ require 'rails_helper'
 RSpec.describe Authorizable, type: :controller do
   controller(Api::V1::BaseController) do
     def index
-      authorize_module!(:civil_registry, :write)
+      authorize_module!(:certifications, :write)
       render json: { ok: true }
     end
   end
@@ -15,7 +15,7 @@ RSpec.describe Authorizable, type: :controller do
   before { routes.draw { get 'index' => 'api/v1/base#index' } }
 
   context 'when the user may act on the module' do
-    before { sign_in create(:user, :municipal_staff, office: 'civil_registry') }
+    before { sign_in create(:user, :municipal_staff, office: 'certifications') }
 
     it 'permits the action' do
       get :index

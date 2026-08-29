@@ -25,14 +25,14 @@ RSpec.describe 'Api::V1::Me', type: :request do
   end
 
   context 'as municipal staff' do
-    before { sign_in create(:user, :municipal_staff, office: 'civil_registry') }
+    before { sign_in create(:user, :municipal_staff, office: 'certifications') }
 
     it 'returns write access to its office module only' do
       get '/api/v1/me'
 
       perms = json.dig(:data, :user, :permissions)
-      expect(perms.keys).to eq([:civil_registry])
-      expect(perms[:civil_registry]).to match_array(%w[read write])
+      expect(perms.keys).to eq([:certifications])
+      expect(perms[:certifications]).to match_array(%w[read write])
     end
   end
 

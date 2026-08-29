@@ -68,7 +68,7 @@ describe('AppLayout', () => {
   })
 
   it('hides nav items the user has no permission for', () => {
-    renderLayout({ civil_registry: ['read'] })
+    renderLayout({ certifications: ['read'] })
 
     const nav = screen.getByRole('navigation')
     expect(within(nav).queryByRole('button', { name: /users/i })).toBeNull()

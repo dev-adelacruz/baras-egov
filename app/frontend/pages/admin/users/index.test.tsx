@@ -43,7 +43,7 @@ afterEach(() => vi.clearAllMocks())
 describe('AdminUsersPage', () => {
   it('lists accounts for an admin', async () => {
     ;(adminUserService.list as ReturnType<typeof vi.fn>).mockResolvedValue([
-      { id: 2, email: 'clerk@baras.gov', role: 'municipal_staff', office: 'civil_registry', barangay: null, active: true },
+      { id: 2, email: 'clerk@baras.gov', role: 'municipal_staff', office: 'certifications', barangay: null, active: true },
     ])
 
     renderPage({ user_management: ['read', 'write', 'delete', 'manage'] })
@@ -53,7 +53,7 @@ describe('AdminUsersPage', () => {
   })
 
   it('blocks a user without user_management access', () => {
-    renderPage({ civil_registry: ['read', 'write'] })
+    renderPage({ certifications: ['read', 'write'] })
 
     expect(screen.getByText('Access restricted')).toBeInTheDocument()
     expect(adminUserService.list).not.toHaveBeenCalled()

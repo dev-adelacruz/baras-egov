@@ -23,11 +23,11 @@ RSpec.describe Permission do
     end
 
     it 'gives a department head manage on their office and read elsewhere, never user_management' do
-      head = build(:user, :department_head, office: 'civil_registry')
+      head = build(:user, :department_head, office: 'certifications')
 
       permissions = described_class.for(head)
 
-      expect(permissions['civil_registry']).to match_array(%i[read write manage])
+      expect(permissions['certifications']).to match_array(%i[read write manage])
       expect(permissions['treasury']).to eq(%i[read])
       expect(permissions).not_to have_key('user_management')
     end
@@ -41,10 +41,10 @@ RSpec.describe Permission do
 
   describe '.permits?' do
     it 'is true when the action is allowed and false otherwise' do
-      staff = build(:user, :municipal_staff, office: 'civil_registry')
+      staff = build(:user, :municipal_staff, office: 'certifications')
 
-      expect(described_class.permits?(staff, :civil_registry, :write)).to be(true)
-      expect(described_class.permits?(staff, :civil_registry, :delete)).to be(false)
+      expect(described_class.permits?(staff, :certifications, :write)).to be(true)
+      expect(described_class.permits?(staff, :certifications, :delete)).to be(false)
       expect(described_class.permits?(staff, :treasury, :read)).to be(false)
     end
   end

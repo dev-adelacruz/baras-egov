@@ -27,8 +27,8 @@ const renderWithPermissions = (
 
 describe('Can', () => {
   it('renders children when the user has the permission', () => {
-    renderWithPermissions({ civil_registry: ['read', 'write'] }, (
-      <Can module="civil_registry" action="write">
+    renderWithPermissions({ certifications: ['read', 'write'] }, (
+      <Can module="certifications" action="write">
         <span>Edit record</span>
       </Can>
     ))
@@ -36,8 +36,8 @@ describe('Can', () => {
   })
 
   it('hides children when the action is not permitted', () => {
-    renderWithPermissions({ civil_registry: ['read'] }, (
-      <Can module="civil_registry" action="write">
+    renderWithPermissions({ certifications: ['read'] }, (
+      <Can module="certifications" action="write">
         <span>Edit record</span>
       </Can>
     ))
@@ -45,7 +45,7 @@ describe('Can', () => {
   })
 
   it('renders the fallback when the module is inaccessible', () => {
-    renderWithPermissions({ civil_registry: ['read'] }, (
+    renderWithPermissions({ certifications: ['read'] }, (
       <Can module="treasury" action="read" fallback={<span>No access</span>}>
         <span>Treasury</span>
       </Can>

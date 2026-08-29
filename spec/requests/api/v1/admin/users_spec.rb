@@ -23,7 +23,7 @@ RSpec.describe 'Api::V1::Admin::Users', type: :request do
 
     describe 'GET /api/v1/admin/users' do
       it 'lists accounts and filters by office and barangay' do
-        create(:user, :municipal_staff, email: 'registry@baras.gov', office: 'civil_registry')
+        create(:user, :municipal_staff, email: 'registry@baras.gov', office: 'certifications')
         create(:user, :barangay_staff, email: 'field@baras.gov', office: 'disaster_management', barangay: 'Barangay Uno')
 
         get '/api/v1/admin/users', params: { office: 'disaster_management' }
@@ -64,7 +64,7 @@ RSpec.describe 'Api::V1::Admin::Users', type: :request do
 
     describe 'PATCH /api/v1/admin/users/:id' do
       it 'reassigns role and office' do
-        user = create(:user, :municipal_staff, office: 'civil_registry')
+        user = create(:user, :municipal_staff, office: 'certifications')
 
         patch "/api/v1/admin/users/#{user.id}", params: { user: { role: 'department_head', office: 'treasury' } }
 
