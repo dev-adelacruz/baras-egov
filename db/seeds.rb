@@ -14,7 +14,12 @@ if Rails.env.local?
   # Retired in BRGY-137. Removed rather than remapped: these were never real
   # people, and leaving them would keep the municipal shape alive in every
   # developer's database and in every screenshot taken from one.
+  # Every account from the municipal seed set, including the old admin — it is
+  # not superseded by admin@barangay.gov.local, it simply co-exists with it, and
+  # a second full administrator with a published dev password is not something
+  # to leave lying in every developer's database.
   retired_emails = %w[
+    admin@baras.gov.local
     civil.head@baras.gov.local
     civil.clerk@baras.gov.local
     treasury.clerk@baras.gov.local
