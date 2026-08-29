@@ -18,6 +18,10 @@ if Rails.env.local?
   # not superseded by admin@barangay.gov.local, it simply co-exists with it, and
   # a second full administrator with a published dev password is not something
   # to leave lying in every developer's database.
+  #
+  # bhw@ joins them in BRGY-142. It sat at a `health` desk that no longer
+  # exists — a Barangay Health Station reports to the municipal RHU and keeps
+  # the DOH's FHSIS records, so there is no barangay desk to move it to.
   retired_emails = %w[
     admin@baras.gov.local
     civil.head@baras.gov.local
@@ -25,22 +29,26 @@ if Rails.env.local?
     treasury.clerk@baras.gov.local
     field.sanisidro@baras.gov.local
     inactive@baras.gov.local
+    bhw@barangay.gov.local
   ]
 
   seed_users = [
-    { email: 'admin@barangay.gov.local',        role: :admin,           office: nil,                   active: true },
+    { email: 'admin@barangay.gov.local',        role: :admin,           office: nil,               active: true },
     # The Punong Barangay is not an IT admin — they hold the barangay's
     # authority, not the system's. Seeded as a department head over the
     # documents desk so the two are not conflated during development.
-    { email: 'captain@barangay.gov.local',      role: :department_head, office: 'certifications',      active: true },
-    { email: 'secretary@barangay.gov.local',    role: :municipal_staff, office: 'certifications',      active: true },
-    { email: 'treasurer@barangay.gov.local',    role: :municipal_staff, office: 'treasury',            active: true },
-    { email: 'lupon@barangay.gov.local',        role: :municipal_staff, office: 'katarungan',          active: true },
-    { email: 'bhw@barangay.gov.local',          role: :municipal_staff, office: 'health',              active: true },
-    { email: 'social@barangay.gov.local',       role: :municipal_staff, office: 'social_services',     active: true },
+    { email: 'captain@barangay.gov.local',      role: :department_head, office: 'certifications',  active: true },
+    { email: 'secretary@barangay.gov.local',    role: :municipal_staff, office: 'certifications',  active: true },
+    # The RBI encoder. `residents` is readable by every provisioned account but
+    # writable only from this desk, so one seed has to sit here or nothing in
+    # development can actually maintain the register.
+    { email: 'records@barangay.gov.local',      role: :municipal_staff, office: 'residents',       active: true },
+    { email: 'treasurer@barangay.gov.local',    role: :municipal_staff, office: 'treasury',        active: true },
+    { email: 'lupon@barangay.gov.local',        role: :municipal_staff, office: 'katarungan',      active: true },
+    { email: 'social@barangay.gov.local',       role: :municipal_staff, office: 'social_services', active: true },
     # Kept deactivated on purpose: /admin/users has an Active/Deactivated
     # column and a reactivate action, and neither is exercisable without one.
-    { email: 'former.staff@barangay.gov.local', role: :municipal_staff, office: 'clearances',          active: false }
+    { email: 'former.staff@barangay.gov.local', role: :municipal_staff, office: 'certifications',  active: false }
   ]
 
   removed = User.where(email: retired_emails).destroy_all.size

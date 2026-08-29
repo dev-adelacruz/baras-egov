@@ -7,7 +7,7 @@
  *
  * `.local` is not a routable TLD — it is reserved for multicast DNS — so mail
  * sent here does not leave the network. That matches the rest of this
- * environment (`db/seeds.rb` issues accounts at `@baras.gov.local`) and is
+ * environment (`db/seeds.rb` issues accounts at `@barangay.gov.local`) and is
  * correct for development, but it is NOT a working destination in production.
  * BRGY-121 stays open until a monitored, routable address replaces it.
  *

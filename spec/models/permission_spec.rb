@@ -13,13 +13,26 @@ RSpec.describe Permission do
       expect(permissions['user_management']).to match_array(%i[read write delete manage])
     end
 
-    it 'limits municipal staff to write access on their office module only' do
+    it 'gives municipal staff write on their own office and read on the shared registers' do
       staff = build(:user, :municipal_staff, office: 'treasury')
 
       permissions = described_class.for(staff)
 
-      expect(permissions.keys).to eq(['treasury'])
+      expect(permissions.keys).to match_array(%w[treasury residents])
       expect(permissions['treasury']).to match_array(%i[read write])
+      # BRGY-142: a treasurer looks up the same resident the Lupon secretary
+      # does. Read is shared; writing the register is not.
+      expect(permissions['residents']).to eq(%i[read])
+    end
+
+    it 'keeps write access for staff whose own office is a shared register' do
+      encoder = build(:user, :municipal_staff, office: 'residents')
+
+      permissions = described_class.for(encoder)
+
+      # The shared read must not narrow the desk that owns the register — the
+      # RBI encoder would otherwise be unable to maintain it.
+      expect(permissions['residents']).to match_array(%i[read write])
     end
 
     it 'gives a department head manage on their office and read elsewhere, never user_management' do
@@ -32,9 +45,12 @@ RSpec.describe Permission do
       expect(permissions).not_to have_key('user_management')
     end
 
-    it 'returns no permissions for staff without an office' do
+    it 'returns no permissions for staff without an office, not even the shared registers' do
       staff = build(:user, :municipal_staff, office: nil)
 
+      # An account with no desk is unprovisioned, and the resident register is
+      # access-controlled by DILG mandate — the wrong thing to hand to an
+      # account nobody has finished setting up.
       expect(described_class.for(staff)).to eq({})
     end
   end
@@ -46,6 +62,8 @@ RSpec.describe Permission do
       expect(described_class.permits?(staff, :certifications, :write)).to be(true)
       expect(described_class.permits?(staff, :certifications, :delete)).to be(false)
       expect(described_class.permits?(staff, :treasury, :read)).to be(false)
+      expect(described_class.permits?(staff, :residents, :read)).to be(true)
+      expect(described_class.permits?(staff, :residents, :write)).to be(false)
     end
   end
 end

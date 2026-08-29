@@ -109,17 +109,20 @@ class AdminUserService {
 export const adminUserService = new AdminUserService();
 
 // Kept in sync with Permission::MODULES on the backend (app/models/permission.rb).
-// These are the barangay's own desks — BRGY-137 replaced the municipal org
-// chart this used to mirror. Order matches the Ruby constant so the two can be
-// diffed by eye.
+// These are the barangay's own desks — BRGY-137 replaced the municipal org chart
+// this used to mirror, and BRGY-142 cut it to what the hall actually staffs.
+// Order matches the Ruby constant so the two can be diffed by eye.
+//
+// A module is a desk a person is assigned to, not a document type. Barangay
+// clearance lives under `certifications` because the same secretary prepares
+// both; `health` is gone because a Barangay Health Station reports to the
+// municipal RHU and keeps DOH-prescribed records, not the barangay's.
 export const OFFICE_MODULES = [
   'residents',
   'certifications',
-  'clearances',
   'katarungan',
   'treasury',
   'social_services',
-  'health',
   'disaster_management',
   'legislative',
   'reports',
