@@ -38,7 +38,11 @@ const renderPage = (permissions: Record<string, string[]>) => {
   )
 }
 
-afterEach(() => vi.clearAllMocks())
+// reset, not clear: `clearAllMocks` wipes recorded calls but leaves
+// implementations in place, so a `mockRejectedValue` set by one test stays
+// armed for every test after it. That was survivable only while the rejecting
+// test happened to run last.
+afterEach(() => vi.resetAllMocks())
 
 describe('AdminUsersPage', () => {
   it('lists accounts for an admin', async () => {
@@ -155,6 +159,195 @@ describe('AdminUsersPage', () => {
       )
 
       expect(await screen.findByText(refusal)).toBeInTheDocument()
+    })
+  })
+
+  /**
+   * BRGY-132. Failure had a red banner; success had nothing at all. With 40
+   * accounts a newly created one lands in alphabetical position off-screen, so
+   * "did that work?" was only answerable by searching for the address you had
+   * just typed.
+   */
+  describe('mutation feedback', () => {
+    const admin = { id: 1, email: 'admin@baras.gov', role: 'admin', office: null, active: true }
+    const colleague = { id: 2, email: 'clerk@baras.gov', role: 'staff', office: 'certifications', active: true }
+    const manage = { user_management: ['read', 'write', 'delete', 'manage'] }
+
+    const listReturns = (rows: unknown[]) =>
+      (adminUserService.list as ReturnType<typeof vi.fn>).mockResolvedValue(rows)
+
+    const deactivateColleague = async (user: ReturnType<typeof userEvent.setup>) => {
+      await user.click(await screen.findByRole('button', { name: /deactivate/i }))
+      await user.click(
+        within(await screen.findByRole('alertdialog')).getByRole('button', { name: 'Deactivate account' })
+      )
+    }
+
+    it('AC1/AC2 — confirms a deactivation by name, in a status region', async () => {
+      listReturns([admin, colleague])
+      // Resolves with the updated row, as the real service does.
+      ;(adminUserService.deactivate as ReturnType<typeof vi.fn>).mockResolvedValue({
+        ...colleague, active: false,
+      })
+      const user = userEvent.setup()
+      renderPage(manage)
+      await deactivateColleague(user)
+
+      const notice = await screen.findByTestId('admin-users-notice')
+      // status, not alert: it must not interrupt what the admin is doing.
+      expect(notice).toHaveAttribute('role', 'status')
+      expect(notice).toHaveTextContent('Deactivated clerk@baras.gov. They can no longer sign in.')
+    })
+
+    it('AC1 — a role change names the person and the new role', async () => {
+      listReturns([admin, colleague])
+      const user = userEvent.setup()
+      renderPage(manage)
+
+      await screen.findByText('clerk@baras.gov')
+      await user.selectOptions(screen.getByLabelText('Role for clerk@baras.gov'), 'department_head')
+      await user.click(
+        within(await screen.findByRole('alertdialog')).getByRole('button', { name: 'Change role' })
+      )
+
+      expect(await screen.findByTestId('admin-users-notice')).toHaveTextContent(
+        'clerk@baras.gov now has the Department Head role.'
+      )
+    })
+
+    it('AC1 — role copy stays grammatical for every role, including Admin and Staff', async () => {
+      // "is now a Admin" / "is now a Staff" was the first phrasing. Naming the
+      // role as a role is the only wording correct across all three.
+      listReturns([admin, colleague])
+      const user = userEvent.setup()
+      renderPage(manage)
+
+      await screen.findByText('clerk@baras.gov')
+      await user.selectOptions(screen.getByLabelText('Role for clerk@baras.gov'), 'admin')
+      await user.click(
+        within(await screen.findByRole('alertdialog')).getByRole('button', { name: 'Change role' })
+      )
+
+      const notice = await screen.findByTestId('admin-users-notice')
+      expect(notice).toHaveTextContent('clerk@baras.gov now has the Admin role.')
+      expect(notice.textContent).not.toMatch(/is now a Admin/)
+    })
+
+    it('AC3 — marks the affected row as recently changed', async () => {
+      listReturns([admin, colleague])
+      const user = userEvent.setup()
+      renderPage(manage)
+      await deactivateColleague(user)
+
+      await screen.findByTestId('admin-users-notice')
+      expect(screen.getByTestId('user-row-2')).toHaveAttribute('data-recently-changed', 'true')
+      expect(screen.getByTestId('user-row-1')).not.toHaveAttribute('data-recently-changed')
+    })
+
+    it('says so when the changed account is filtered out of the visible list', async () => {
+      // The row the admin just acted on drops out of the result set. Without
+      // this the page reloads to a list that looks untouched.
+      ;(adminUserService.list as ReturnType<typeof vi.fn>)
+        .mockResolvedValueOnce([admin, colleague])
+        .mockResolvedValue([admin])
+
+      const user = userEvent.setup()
+      renderPage(manage)
+      await deactivateColleague(user)
+
+      expect(await screen.findByTestId('admin-users-notice')).toHaveTextContent(
+        /It is not shown below — the current search or office filter excludes it\./
+      )
+    })
+
+    it('AC4 — offers undo, and undoing reactivates the account', async () => {
+      listReturns([admin, colleague])
+      ;(adminUserService.deactivate as ReturnType<typeof vi.fn>).mockResolvedValue({
+        ...colleague, active: false,
+      })
+      ;(adminUserService.activate as ReturnType<typeof vi.fn>).mockResolvedValue(colleague)
+      const user = userEvent.setup()
+      renderPage(manage)
+      await deactivateColleague(user)
+
+      const notice = await screen.findByTestId('admin-users-notice')
+      await user.click(within(notice).getByRole('button', { name: 'Undo' }))
+
+      await waitFor(() => expect(adminUserService.activate).toHaveBeenCalledWith(2))
+      expect(await screen.findByTestId('admin-users-notice')).toHaveTextContent(
+        'clerk@baras.gov can sign in again.'
+      )
+    })
+
+    it('AC4 — a role change offers no undo, having already been confirmed by name', async () => {
+      listReturns([admin, colleague])
+      const user = userEvent.setup()
+      renderPage(manage)
+
+      await screen.findByText('clerk@baras.gov')
+      await user.selectOptions(screen.getByLabelText('Role for clerk@baras.gov'), 'department_head')
+      await user.click(
+        within(await screen.findByRole('alertdialog')).getByRole('button', { name: 'Change role' })
+      )
+
+      const notice = await screen.findByTestId('admin-users-notice')
+      expect(within(notice).queryByRole('button', { name: 'Undo' })).toBeNull()
+    })
+
+    it('AC4 — a refused undo surfaces the server\'s reason and drops the confirmation', async () => {
+      // Undoing a reactivation is a deactivation, which the server refuses when
+      // it would empty the last admin seat.
+      const deactivated = { ...colleague, active: false }
+      listReturns([admin, deactivated])
+      ;(adminUserService.deactivate as ReturnType<typeof vi.fn>).mockRejectedValue(
+        new Error('This is the only administrator who can still sign in.')
+      )
+
+      const user = userEvent.setup()
+      renderPage(manage)
+
+      await user.click(await screen.findByRole('button', { name: /reactivate/i }))
+      await user.click(
+        within(await screen.findByRole('alertdialog')).getByRole('button', { name: 'Reactivate account' })
+      )
+      const notice = await screen.findByTestId('admin-users-notice')
+      await user.click(within(notice).getByRole('button', { name: 'Undo' }))
+
+      expect(
+        await screen.findByText('This is the only administrator who can still sign in.')
+      ).toBeInTheDocument()
+      expect(screen.queryByTestId('admin-users-notice')).toBeNull()
+    })
+
+    it('AC5 — a failed mutation shows the error banner and no success confirmation', async () => {
+      listReturns([admin, colleague])
+      ;(adminUserService.deactivate as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('Nope.'))
+
+      const user = userEvent.setup()
+      renderPage(manage)
+      await deactivateColleague(user)
+
+      expect(await screen.findByText('Nope.')).toBeInTheDocument()
+      expect(screen.queryByTestId('admin-users-notice')).toBeNull()
+    })
+
+    it('AC1 — creating an account confirms it by name', async () => {
+      listReturns([admin])
+      ;(adminUserService.create as ReturnType<typeof vi.fn>).mockResolvedValue({
+        id: 3, email: 'new.clerk@baras.gov', role: 'staff', office: 'certifications', active: true,
+      })
+
+      const user = userEvent.setup()
+      renderPage(manage)
+
+      await user.click(await screen.findByRole('button', { name: /new account/i }))
+      await user.type(await screen.findByLabelText('Email'), 'new.clerk@baras.gov')
+      await user.type(screen.getByLabelText('Temporary password'), 'password123')
+      await user.click(screen.getByRole('button', { name: 'Create account' }))
+
+      expect(await screen.findByTestId('admin-users-notice')).toHaveTextContent(
+        'Created new.clerk@baras.gov.'
+      )
     })
   })
 })
