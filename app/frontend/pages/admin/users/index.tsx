@@ -525,7 +525,10 @@ const AdminUsersPage: React.FC = () => {
               {!hasLoaded && isLoading && (
                 <tr><td colSpan={5} className="px-4 py-6 text-center text-slate-400">Loading…</td></tr>
               )}
-              {hasLoaded && users.length === 0 && (
+              {/* Not while an error is up: "No accounts found." is a claim about
+                  the roster, and a request that failed has not established it.
+                  The banner already says what happened. */}
+              {hasLoaded && !error && users.length === 0 && (
                 <tr><td colSpan={5} className="px-4 py-6 text-center text-slate-400">No accounts found.</td></tr>
               )}
               {users.map((user) => (

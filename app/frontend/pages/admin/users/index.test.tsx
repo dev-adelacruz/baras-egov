@@ -627,6 +627,16 @@ describe('AdminUsersPage', () => {
       )
     })
 
+    it('a failed load does not also claim the roster is empty', async () => {
+      // "Failed to load accounts." and "No accounts found." are two different
+      // claims, and only one of them is true.
+      list().mockRejectedValue(new Error('Failed to load accounts.'))
+      renderPage(manage)
+
+      expect(await screen.findByText('Failed to load accounts.')).toBeInTheDocument()
+      expect(screen.queryByText('No accounts found.')).toBeNull()
+    })
+
     it('rapid clear settles on the unfiltered list', async () => {
       list().mockResolvedValue([admin, colleague, treasurer])
       const user = setup()
