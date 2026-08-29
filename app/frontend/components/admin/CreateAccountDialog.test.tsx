@@ -1,7 +1,7 @@
 import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import CreateAccountDialog from './CreateAccountDialog'
-import { adminUserService } from '../../services/adminUserService'
+import { adminUserService, ASSIGNABLE_ROLES, OFFICE_MODULES } from '../../services/adminUserService'
 
 /**
  * BRGY-129. Each test names the acceptance criterion it covers, because the
@@ -19,7 +19,7 @@ const created = {
   id: 9,
   email: 'juan@example.gov.ph',
   role: 'municipal_staff',
-  office: 'civil_registry',
+  office: 'certifications',
   barangay: null,
   active: true,
 }
@@ -239,7 +239,7 @@ describe('CreateAccountDialog', () => {
       email: 'juan@example.gov.ph',
       password: 'sekretong-lihim',
       role: 'municipal_staff',
-      office: 'civil_registry',
+      office: 'certifications',
     })
   })
 
@@ -249,6 +249,21 @@ describe('CreateAccountDialog', () => {
   it('defaults to the least-privileged role, not admin', () => {
     setup()
     expect(screen.getByLabelText('Role')).toHaveValue('municipal_staff')
+  })
+
+  // Both defaults are named rather than indexed. BRGY-137 reordered
+  // OFFICE_MODULES and silently moved the office default from one desk to
+  // another; before that, ASSIGNABLE_ROLES[0] silently made every new account
+  // an admin. A positional default is a hidden dependency on list order.
+  it('takes its defaults by name, not by list position', () => {
+    setup()
+    expect(screen.getByLabelText('Office')).toHaveValue('certifications')
+    expect(ASSIGNABLE_ROLES[0]).toBe('admin')
+    expect(OFFICE_MODULES[0]).toBe('residents')
+    // Neither list's first entry is what the form defaults to — which is the
+    // whole point. If these ever coincide, the guard has stopped guarding.
+    expect(screen.getByLabelText('Role')).not.toHaveValue(ASSIGNABLE_ROLES[0])
+    expect(screen.getByLabelText('Office')).not.toHaveValue(OFFICE_MODULES[0])
   })
 
   it.each([

@@ -5,7 +5,7 @@ FactoryBot.define do
     email { Faker::Internet.email }
     password { SecureRandom.hex }
     role { :municipal_staff }
-    office { 'civil_registry' }
+    office { 'certifications' }
 
     trait :admin do
       role { :admin }
@@ -14,12 +14,12 @@ FactoryBot.define do
 
     trait :department_head do
       role { :department_head }
-      office { 'civil_registry' }
+      office { 'certifications' }
     end
 
     trait :municipal_staff do
       role { :municipal_staff }
-      office { 'civil_registry' }
+      office { 'certifications' }
     end
 
     trait :barangay_staff do
