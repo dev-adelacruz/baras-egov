@@ -29,13 +29,16 @@
  *
  * Usage:
  *
- *   NODE_PATH=$(ruby -e "puts Dir.glob(File.expand_path('~/.npm/_npx/*\/node_modules')).max_by{|p|File.mtime(p)}") \
- *     node .claude/skills/qa-agent/scripts/playwright-driver.cjs \
- *     --config /tmp/qa-agent-driver-config.json
- *
- * Or, if you have playwright in the repo's node_modules, just:
- *
  *   node .claude/skills/qa-agent/scripts/playwright-driver.cjs --config <path>
+ *
+ * No NODE_PATH prefix. loadPlaywright() below resolves the module itself —
+ * repo install first, then the npx cache entry that actually contains
+ * playwright, newest first. The prefix the docs used to carry
+ * (`ls ... | head -1`) picked the *alphabetically* first cache directory,
+ * which on a typical machine has no playwright in it, so it set NODE_PATH to
+ * a useless path and the driver died with "could not resolve playwright" —
+ * which the mode files then told you to report as an environment problem
+ * rather than a tooling bug. BRGY-138.
  *
  * Config schema (JSON):
  *
@@ -49,10 +52,19 @@
  *     "cookies": [                                             // optional — inject auth cookies before navigation (for staging)
  *       { "name": "_session_id", "value": "...", "domain": "staging.example.com", "path": "/" }
  *     ],
+ *     "loginPath": "/login",                                   // optional — any scored URL that lands here FAILS (see below)
+ *     "reducedMotion": "reduce",                               // optional — "reduce" | "no-preference"
+ *     "colorScheme": "dark",                                   // optional — "light" | "dark" | "no-preference"
+ *     "hasTouch": true,                                        // optional — also sets isMobile, for tap-only interactions
+ *     "locale": "en-PH",                                       // optional
  *     "login": {                                               // optional — form login, run ONCE before the URL loop
  *       "path": "/users/sign_in",
  *       "fields": { "#user_email": "qa@example.com", "#user_password": "secret" },
- *       "submit": "button[type=submit]",
+ *       "steps": [                                             // optional — any step action, for logins fields+submit cannot express
+ *         { "action": "check", "selector": "input[name=remember_me]" },
+ *         { "action": "click", "selector": "button[type=submit]" }
+ *       ],
+ *       "submit": "button[type=submit]",                       // optional if `steps` already clicks submit
  *       "expectText": "Dashboard",                             // optional post-login assertion
  *       "expectUrlNot": "sign_in",                             // optional — fail if still on the login page
  *       "timeoutMs": 15000
@@ -279,11 +291,16 @@ async function runStep(page, step, evidenceDir, shots) {
       break;
 
     case 'waitForText':
-      await page.waitForFunction(
-        (txt) => document.body && document.body.innerText.includes(txt),
-        String(need('text')),
-        { timeout: t },
-      );
+      try {
+        await page.waitForFunction(
+          (txt) => document.body && document.body.innerText.includes(txt),
+          String(need('text')),
+          { timeout: t },
+        );
+      } catch (e) {
+        // runSteps already prefixes `step[i] <action>`, so no prefix here.
+        throw new Error(await textMissHint(page, String(step.text)));
+      }
       break;
 
     case 'waitMs':
@@ -293,7 +310,7 @@ async function runStep(page, step, evidenceDir, shots) {
     case 'expectText': {
       const body = await page.evaluate(() => (document.body ? document.body.innerText : ''));
       if (!body.includes(String(need('text')))) {
-        throw new Error(`expected text "${String(step.text).slice(0, 80)}" not present`);
+        throw new Error(await textMissHint(page, String(step.text)));
       }
       break;
     }
@@ -374,12 +391,34 @@ async function doLogin(ctx, cfg) {
       await page.locator(selector).fill(String(value), { timeout: t });
     }
 
+    // BRGY-138. `fields` + `submit` cannot express a sign-in that needs
+    // anything else — most importantly ticking "Remember me", which is what
+    // moves a JWT out of per-page sessionStorage and into localStorage, where
+    // it survives the rest of the URL loop. `steps` accepts the same actions
+    // as a URL's own steps, so the pattern is configured once rather than
+    // copied into every spec.
+    let submitted = false;
+
+    if (Array.isArray(login.steps) && login.steps.length > 0) {
+      const shots = [];
+      const outcome = await runSteps(page, login.steps, cfg.evidenceDir, shots);
+      if (outcome.failure) throw new Error(`login ${outcome.failure}`);
+      submitted = true;
+    }
+
     if (login.submit) {
       await Promise.all([
         page.waitForLoadState('domcontentloaded', { timeout: t }).catch(() => {}),
         page.locator(login.submit).click({ timeout: t }),
       ]);
-      // Give the post-submit navigation / XHR redirect a moment to land.
+      submitted = true;
+    }
+
+    // Give the post-submit navigation / XHR redirect a moment to land. Applies
+    // to both paths: a `steps` login that clicks submit needs exactly the same
+    // settle, and without it `expectUrlNot` runs while the SPA is still on the
+    // sign-in route and reports perfectly good credentials as rejected.
+    if (submitted) {
       await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {});
     }
 
@@ -399,6 +438,43 @@ async function doLogin(ctx, cfg) {
   } finally {
     await page.close().catch(() => {});
   }
+}
+
+// Why a text assertion missed, in the terms the author needs to fix it.
+//
+// `innerText` is CSS-transformed, so a heading styled `text-transform:
+// uppercase` reports "OFFICE" for markup that reads `Office`. Asserting the
+// source casing then fails for a reason the message never mentions, and the
+// obvious next move — assume the element is absent — is wrong. BRGY-138.
+async function textMissHint(page, wanted) {
+  const body = await page.evaluate(() => (document.body ? document.body.innerText : ''));
+  const base = `expected text "${wanted.slice(0, 80)}" not present`;
+
+  const lowerBody = body.toLowerCase();
+  const lowerWanted = wanted.toLowerCase();
+  if (lowerBody.includes(lowerWanted)) {
+    // Collect every distinct rendering, not just the first hit — searching for
+    // "Office" finds it inside "All offices" before it finds the "OFFICE"
+    // column header, and naming only the first would point at the wrong one.
+    const renderings = [];
+    for (let i = lowerBody.indexOf(lowerWanted); i !== -1; i = lowerBody.indexOf(lowerWanted, i + 1)) {
+      const seen = body.slice(i, i + wanted.length);
+      if (!renderings.includes(seen)) renderings.push(seen);
+      if (renderings.length >= 3) break;
+    }
+    const as = renderings.map(r => `"${r}"`).join(', ');
+    return `${base} — but it IS present as ${as}. innerText is CSS-transformed; ` +
+           'assert the rendered casing, not the source.';
+  }
+
+  const collapsed = body.replace(/\s+/g, ' ');
+  const wantedCollapsed = wanted.replace(/\s+/g, ' ');
+  if (collapsed.includes(wantedCollapsed)) {
+    return `${base} — but it IS present once whitespace is collapsed. The text ` +
+           'is split across elements or wrapped.';
+  }
+
+  return base;
 }
 
 // ---------- Single-URL run ----------
@@ -557,6 +633,42 @@ async function runOne(ctx, urlSpec, cfg, runIndex) {
     if (finalStatus < 200 || finalStatus >= 400) {
       failures.push(`http: status ${finalStatus} (expected 2xx/3xx)`);
     }
+
+    // BRGY-138. The false green that costs the most: an unauthenticated request
+    // is redirected to the sign-in page, which returns 200 with no console
+    // errors and no failed requests. Every assertion above passes, and the URL
+    // scores PASS having verified a login form.
+    //
+    // The driver already exits 2 when a login *fails*. This covers the worse
+    // case — a login that succeeded and then did not persist, which produces
+    // the identical empty result with no signal at all. This app stores its JWT
+    // in sessionStorage, which is per-page, so that was the normal outcome.
+    const loginPath = cfg.loginPath || (cfg.login && cfg.login.path);
+    if (loginPath) {
+      // Segment-aware, not a bare startsWith. A plain prefix test treats
+      // loginPath "/" as matching every path, which would exempt every URL and
+      // silently switch the guard off — the same shape of failure this guard
+      // exists to catch. It would also exempt "/loginbait" for "/login".
+      const underLoginPath = (p) => {
+        const clean = String(p).split('?')[0].split('#')[0].replace(/\/+$/, '') || '/';
+        const base = loginPath.replace(/\/+$/, '') || '/';
+        return base === '/' ? clean === '/' : clean === base || clean.startsWith(base + '/');
+      };
+
+      let landedOn = null;
+      try {
+        landedOn = new URL(page.url()).pathname;
+      } catch (_) {
+        // about:blank or a navigation that never resolved — nothing to compare.
+      }
+
+      if (landedOn && !underLoginPath(urlSpec.path) && underLoginPath(landedOn)) {
+        failures.push(
+          `auth: redirected to "${landedOn}" — this URL was scored against the sign-in ` +
+          'page, not the page under test. The session did not persist.'
+        );
+      }
+    }
     if (consoleErrors.length > 0) {
       failures.push(`console: ${consoleErrors.length} error(s) — first: ${consoleErrors[0].slice(0, 120)}`);
     }
@@ -644,7 +756,18 @@ async function runOne(ctx, urlSpec, cfg, runIndex) {
   }
 
   const browser = await playwright.chromium.launch({ headless: true });
-  const ctx = await browser.newContext({ viewport: cfg.viewport });
+  // BRGY-138. Playwright supports these and the gate has a use for every one,
+  // but they were not passed through — so no `prefers-reduced-motion`
+  // criterion could ever be verified in-gate, and a scrim dismissed by *tap*
+  // on mobile could not be exercised by a mouse-only driver. Both were caught
+  // by hand on BRGY-126, which the skill's own rules forbid as evidence.
+  const ctx = await browser.newContext({
+    viewport: cfg.viewport,
+    ...(cfg.reducedMotion ? { reducedMotion: cfg.reducedMotion } : {}),
+    ...(cfg.colorScheme ? { colorScheme: cfg.colorScheme } : {}),
+    ...(cfg.hasTouch ? { hasTouch: true, isMobile: true } : {}),
+    ...(cfg.locale ? { locale: cfg.locale } : {}),
+  });
 
   // Inject auth cookies when provided (e.g. staging session cookies).
   if (Array.isArray(cfg.cookies) && cfg.cookies.length > 0) {

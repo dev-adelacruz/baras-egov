@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "repo": "dev-adelacruz/baras-egov",
+  "jira_domain": "adelacruz.atlassian.net",
+  "jira_project": "BRGY",
+  "base_branch": "main",
+  "local_url": "http://localhost:3001",
+  "e2e_framework": "none",
+  "bug_priority_default": 3
+}
