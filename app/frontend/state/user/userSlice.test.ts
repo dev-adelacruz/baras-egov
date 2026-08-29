@@ -15,7 +15,6 @@ const initial = {
   token: null,
   user: null,
   permissions: {},
-  dataScope: null,
   isLoading: false,
   error: null, errorKind: null,
 }
@@ -54,32 +53,48 @@ describe('userSlice reducer', () => {
     expect(s.token).toBeNull()
   })
 
-  it('fetchCurrentUser.fulfilled stores role, permissions and scope', () => {
+  it('fetchCurrentUser.fulfilled stores role and permissions', () => {
     const s = reducer(initial, {
       type: fetchCurrentUser.fulfilled.type,
       payload: {
         id: 1,
         email: 'staff@baras.gov',
-        role: 'barangay_staff',
+        role: 'staff',
         office: 'disaster_management',
-        barangay: 'Barangay Uno',
-        permissions: { disaster_management: ['read', 'write'] },
-        data_scope: { barangay: 'Barangay Uno' },
+        permissions: { disaster_management: ['read', 'write'], residents: ['read'] },
       },
     })
     expect(s.isSignedIn).toBe(true)
-    expect(s.user?.role).toBe('barangay_staff')
-    expect(s.permissions).toEqual({ disaster_management: ['read', 'write'] })
-    expect(s.dataScope).toEqual({ barangay: 'Barangay Uno' })
+    expect(s.user?.role).toBe('staff')
+    expect(s.permissions).toEqual({ disaster_management: ['read', 'write'], residents: ['read'] })
   })
 
-  it('signOut clears permissions and scope', () => {
+  // BRGY-136: the server stopped sending data_scope and barangay. A payload
+  // still carrying them must not resurrect the fields on the client — the slice
+  // reads named keys, so a stale server would be ignored rather than obeyed.
+  it('ignores data_scope and barangay if a stale server still sends them', () => {
+    const s = reducer(initial, {
+      type: fetchCurrentUser.fulfilled.type,
+      payload: {
+        id: 1,
+        email: 'staff@baras.gov',
+        role: 'staff',
+        office: 'treasury',
+        barangay: 'Barangay Uno',
+        permissions: { treasury: ['read', 'write'] },
+        data_scope: { barangay: 'Barangay Uno' },
+      },
+    })
+    expect(s.user).not.toHaveProperty('barangay')
+    expect(s).not.toHaveProperty('dataScope')
+  })
+
+  it('signOut clears permissions', () => {
     const s = reducer(
-      { ...initial, isSignedIn: true, permissions: { treasury: ['read'] }, dataScope: 'all' },
+      { ...initial, isSignedIn: true, permissions: { treasury: ['read'] } },
       signOut()
     )
     expect(s.permissions).toEqual({})
-    expect(s.dataScope).toBeNull()
   })
 })
 

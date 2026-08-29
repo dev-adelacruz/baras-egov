@@ -15,7 +15,7 @@ RSpec.describe Authorizable, type: :controller do
   before { routes.draw { get 'index' => 'api/v1/base#index' } }
 
   context 'when the user may act on the module' do
-    before { sign_in create(:user, :municipal_staff, office: 'certifications') }
+    before { sign_in create(:user, :staff, office: 'certifications') }
 
     it 'permits the action' do
       get :index
@@ -24,7 +24,7 @@ RSpec.describe Authorizable, type: :controller do
   end
 
   context 'when the user may not act on the module' do
-    before { sign_in create(:user, :municipal_staff, office: 'treasury') }
+    before { sign_in create(:user, :staff, office: 'treasury') }
 
     it 'returns 403 and logs the denial' do
       expect(Rails.logger).to receive(:warn).with(/\[authorization\] denied/)

@@ -61,7 +61,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ title, children }) => {
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const user = useSelector((state: RootState) => state.user.user);
-  const { role, canAccessModule, isBarangayScoped, barangay } = usePermissions();
+  const { role, canAccessModule } = usePermissions();
 
   const visibleNavItems = navItems.filter((item) => !item.module || canAccessModule(item.module));
   const [dropdownOpen, setDropdownOpen] = useState(false);
@@ -260,11 +260,9 @@ const AppLayout: React.FC<AppLayoutProps> = ({ title, children }) => {
               <h1 className="text-sm font-bold text-slate-900 leading-tight truncate">{title}</h1>
               <p className="text-[11px] text-slate-500 hidden sm:block">{today}</p>
             </div>
-            {isBarangayScoped && (
-              <span className="ml-1 inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-brand-50 border border-brand-200 text-brand-700 text-[11px] font-semibold shrink-0">
-                {barangay}
-              </span>
-            )}
+            {/* BRGY-136 removed the barangay badge that sat here. It told a
+                user which barangay's records they were looking at, which is
+                only worth saying when it could have been a different one. */}
           </div>
 
           <div className="flex items-center gap-2 shrink-0">

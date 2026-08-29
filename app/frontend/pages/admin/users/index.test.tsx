@@ -23,7 +23,6 @@ const renderPage = (permissions: Record<string, string[]>) => {
         token: 't',
         user: { id: 1, email: 'admin@baras.gov', role: 'admin' },
         permissions,
-        dataScope: 'all' as const,
         isLoading: false,
         error: null, errorKind: null,
       },
@@ -43,7 +42,7 @@ afterEach(() => vi.clearAllMocks())
 describe('AdminUsersPage', () => {
   it('lists accounts for an admin', async () => {
     ;(adminUserService.list as ReturnType<typeof vi.fn>).mockResolvedValue([
-      { id: 2, email: 'clerk@baras.gov', role: 'municipal_staff', office: 'certifications', barangay: null, active: true },
+      { id: 2, email: 'clerk@baras.gov', role: 'staff', office: 'certifications', active: true },
     ])
 
     renderPage({ user_management: ['read', 'write', 'delete', 'manage'] })

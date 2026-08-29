@@ -14,9 +14,8 @@ const renderWithPermissions = (
       user: {
         isSignedIn: true,
         token: 't',
-        user: { id: 1, email: 'a@b.com', role: 'municipal_staff' },
+        user: { id: 1, email: 'a@b.com', role: 'staff' },
         permissions,
-        dataScope: 'all' as const,
         isLoading: false,
         error: null, errorKind: null,
       },

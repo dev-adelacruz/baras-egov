@@ -107,16 +107,15 @@ export const classifyLoginFailure = (status: number, body = ''): LoginFailureKin
 export const loginFailureMessage = (kind: LoginFailureKind): string =>
   LOGIN_FAILURE_MESSAGES[kind];
 
-export type DataScope = 'all' | { barangay: string };
-
+// BRGY-136 removed `DataScope`, `barangay` and `data_scope`. They answered
+// "which barangay's records may this account see", and one deployment holds
+// exactly one barangay's records. Isolation is the deployment, not a filter.
 export interface CurrentUser {
   id: number;
   email: string;
   role: string;
   office: string | null;
-  barangay: string | null;
   permissions: Record<string, string[]>;
-  data_scope: DataScope;
 }
 
 class AuthService {

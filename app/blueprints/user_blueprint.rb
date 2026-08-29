@@ -4,22 +4,21 @@ class UserBlueprint < Blueprinter::Base
 
   fields :email
 
-  # Extended view for the /api/v1/me endpoint: role, scope and the computed
+  # Extended view for the /api/v1/me endpoint: role, desk and the computed
   # permission map the frontend uses for role-aware rendering.
+  #
+  # BRGY-136 dropped `data_scope`. It answered "which barangay's records may
+  # this account see", and one deployment holds one barangay's records.
   view :with_permissions do
-    fields :role, :office, :barangay
+    fields :role, :office
 
     field :permissions do |user|
       user.permissions
     end
-
-    field :data_scope do |user|
-      user.data_scope
-    end
   end
 
-  # View for the admin account-management API: identity, role, scope and status.
+  # View for the admin account-management API: identity, role, desk and status.
   view :admin do
-    fields :role, :office, :barangay, :active
+    fields :role, :office, :active
   end
 end

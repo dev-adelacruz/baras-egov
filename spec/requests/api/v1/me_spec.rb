@@ -13,19 +13,18 @@ RSpec.describe 'Api::V1::Me', type: :request do
   context 'as an admin' do
     before { sign_in create(:user, :admin) }
 
-    it 'returns full permissions across every module and an :all scope' do
+    it 'returns full permissions across every module' do
       get '/api/v1/me'
 
       expect(response).to have_http_status(:ok)
       perms = json.dig(:data, :user, :permissions)
       expect(perms.keys).to match_array(Permission::MODULES.map(&:to_sym))
       expect(perms[:user_management]).to match_array(%w[read write delete manage])
-      expect(json.dig(:data, :user, :data_scope)).to eq('all')
     end
   end
 
-  context 'as municipal staff' do
-    before { sign_in create(:user, :municipal_staff, office: 'certifications') }
+  context 'as staff' do
+    before { sign_in create(:user, :staff, office: 'certifications') }
 
     it 'returns write on its own office and read on the shared registers' do
       get '/api/v1/me'
@@ -37,14 +36,19 @@ RSpec.describe 'Api::V1::Me', type: :request do
     end
   end
 
-  context 'as barangay staff' do
-    before { sign_in create(:user, :barangay_staff, barangay: 'Barangay San Isidro') }
+  # BRGY-136 removed the barangay-scoped payload entirely. This replaces the
+  # spec that asserted its shape: the frontend branched on `data_scope`, so a
+  # field that quietly reappeared would put that branching back into service.
+  context 'payload shape after the single-tenant strip' do
+    before { sign_in create(:user, :staff, office: 'treasury') }
 
-    it 'reports a barangay-scoped data scope and role' do
+    it 'emits neither data_scope nor barangay' do
       get '/api/v1/me'
 
-      expect(json.dig(:data, :user, :role)).to eq('barangay_staff')
-      expect(json.dig(:data, :user, :data_scope)).to eq(barangay: 'Barangay San Isidro')
+      user = json.dig(:data, :user)
+      expect(user).not_to have_key(:data_scope)
+      expect(user).not_to have_key(:barangay)
+      expect(user[:role]).to eq('staff')
     end
   end
 end
