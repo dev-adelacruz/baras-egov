@@ -644,11 +644,27 @@ async function runOne(ctx, urlSpec, cfg, runIndex) {
     // the identical empty result with no signal at all. This app stores its JWT
     // in sessionStorage, which is per-page, so that was the normal outcome.
     const loginPath = cfg.loginPath || (cfg.login && cfg.login.path);
-    if (loginPath && !urlSpec.path.startsWith(loginPath)) {
-      const landedOnLogin = new URL(page.url()).pathname.startsWith(loginPath);
-      if (landedOnLogin) {
+    if (loginPath) {
+      // Segment-aware, not a bare startsWith. A plain prefix test treats
+      // loginPath "/" as matching every path, which would exempt every URL and
+      // silently switch the guard off — the same shape of failure this guard
+      // exists to catch. It would also exempt "/loginbait" for "/login".
+      const underLoginPath = (p) => {
+        const clean = String(p).split('?')[0].split('#')[0].replace(/\/+$/, '') || '/';
+        const base = loginPath.replace(/\/+$/, '') || '/';
+        return base === '/' ? clean === '/' : clean === base || clean.startsWith(base + '/');
+      };
+
+      let landedOn = null;
+      try {
+        landedOn = new URL(page.url()).pathname;
+      } catch (_) {
+        // about:blank or a navigation that never resolved — nothing to compare.
+      }
+
+      if (landedOn && !underLoginPath(urlSpec.path) && underLoginPath(landedOn)) {
         failures.push(
-          `auth: redirected to "${loginPath}" — this URL was scored against the sign-in ` +
+          `auth: redirected to "${landedOn}" — this URL was scored against the sign-in ` +
           'page, not the page under test. The session did not persist.'
         );
       }
