@@ -238,7 +238,11 @@ const AdminUsersPage: React.FC = () => {
         setPending(null);
         await afterMutation(
           updated ?? pending.user,
-          `${pending.user.email} is now a ${humanize(pending.role)}.`
+          // "now has the X role", not "is now a X" — the roles are Admin, Staff
+          // and Department Head, which need "an", nothing, and "a" respectively.
+          // Naming the role as a role sidesteps the article and is the only
+          // phrasing that stays correct if a fourth role is ever added.
+          `${pending.user.email} now has the ${humanize(pending.role)} role.`
         );
       } else {
         const makeActive = !pending.user.active;

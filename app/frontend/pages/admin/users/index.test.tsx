@@ -211,8 +211,26 @@ describe('AdminUsersPage', () => {
       )
 
       expect(await screen.findByTestId('admin-users-notice')).toHaveTextContent(
-        'clerk@baras.gov is now a Department Head.'
+        'clerk@baras.gov now has the Department Head role.'
       )
+    })
+
+    it('AC1 — role copy stays grammatical for every role, including Admin and Staff', async () => {
+      // "is now a Admin" / "is now a Staff" was the first phrasing. Naming the
+      // role as a role is the only wording correct across all three.
+      listReturns([admin, colleague])
+      const user = userEvent.setup()
+      renderPage(manage)
+
+      await screen.findByText('clerk@baras.gov')
+      await user.selectOptions(screen.getByLabelText('Role for clerk@baras.gov'), 'admin')
+      await user.click(
+        within(await screen.findByRole('alertdialog')).getByRole('button', { name: 'Change role' })
+      )
+
+      const notice = await screen.findByTestId('admin-users-notice')
+      expect(notice).toHaveTextContent('clerk@baras.gov now has the Admin role.')
+      expect(notice.textContent).not.toMatch(/is now a Admin/)
     })
 
     it('AC3 — marks the affected row as recently changed', async () => {
