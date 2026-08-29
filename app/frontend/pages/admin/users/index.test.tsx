@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from '@testing-library/react'
+import { act, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { Provider } from 'react-redux'
 import { configureStore } from '@reduxjs/toolkit'
@@ -480,6 +480,167 @@ describe('AdminUsersPage', () => {
       const item = await screen.findByRole('menuitem', { name: 'Reactivate account' })
       expect(item).toHaveAttribute('data-tone', 'default')
       expect(screen.queryByRole('menuitem', { name: 'Deactivate account' })).toBeNull()
+    })
+  })
+
+  /**
+   * BRGY-131. Typing "treasury" issued eight requests, one per keystroke, and
+   * nothing tracked which one was current — a slow response for "trea" landing
+   * after a fast one for "treasury" repainted the table with rows that did not
+   * match the box.
+   */
+  describe('search', () => {
+    const admin = { id: 1, email: 'admin@baras.gov', role: 'admin', office: null, active: true }
+    const colleague = { id: 2, email: 'clerk@baras.gov', role: 'staff', office: 'certifications', active: true }
+    const treasurer = { id: 3, email: 'treasurer@baras.gov', role: 'staff', office: 'treasury', active: true }
+    const manage = { user_management: ['read', 'write', 'delete', 'manage'] }
+
+    const list = () => adminUserService.list as ReturnType<typeof vi.fn>
+
+    // Real timers, not fake ones. Testing-library's `waitFor` cannot poll under
+    // Vitest's fake timers, so every `findBy*` hangs — and the debounce is only
+    // 300ms, so waiting it out costs less than the workaround would.
+    const setup = () => userEvent.setup()
+    const box = () => screen.getByLabelText('Search')
+
+    /** Longer than the debounce, so "nothing was sent" means it. */
+    const pastTheWindow = () => act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 500))
+    })
+
+    it('AC1/AC3 — an 8-character query issues one request, not eight', async () => {
+      list().mockResolvedValue([admin, colleague, treasurer])
+      const user = setup()
+      renderPage(manage)
+
+      await screen.findByText('clerk@baras.gov')
+      expect(list()).toHaveBeenCalledTimes(1) // the initial load
+
+      await user.type(box(), 'treasury')
+      // Every keystroke inside the window collapses into one request.
+      await pastTheWindow()
+
+      await waitFor(() => expect(list()).toHaveBeenCalledTimes(2))
+      expect(list()).toHaveBeenLastCalledWith(
+        expect.objectContaining({ search: 'treasury' }),
+        expect.anything()
+      )
+    })
+
+    it('AC3 — a single character sends nothing at all', async () => {
+      list().mockResolvedValue([admin, colleague, treasurer])
+      const user = setup()
+      renderPage(manage)
+
+      await screen.findByText('clerk@baras.gov')
+      list().mockClear()
+
+      await user.type(box(), 't')
+      await pastTheWindow()
+
+      expect(list()).not.toHaveBeenCalled()
+    })
+
+    it('AC3 — deleting back to one character restores the unfiltered list', async () => {
+      // The mirror of the rule above: "tr" → "t" *is* a change of intent, from
+      // a filtered list back to the whole roster, so it must refetch.
+      list().mockResolvedValue([admin, colleague, treasurer])
+      const user = setup()
+      renderPage(manage)
+      await screen.findByText('clerk@baras.gov')
+
+      await user.type(box(), 'tr')
+      await pastTheWindow()
+      await waitFor(() => expect(list()).toHaveBeenCalledTimes(2))
+
+      await user.type(box(), '{Backspace}')
+      await pastTheWindow()
+
+      await waitFor(() => expect(list()).toHaveBeenCalledTimes(3))
+      expect(list()).toHaveBeenLastCalledWith(
+        expect.objectContaining({ search: undefined }),
+        expect.anything()
+      )
+    })
+
+    it('AC2 — a superseded response cannot repaint the table', async () => {
+      list().mockResolvedValueOnce([admin, colleague, treasurer])
+      const user = setup()
+      renderPage(manage)
+      await screen.findByText('clerk@baras.gov')
+
+      // "trea" — deliberately left hanging.
+      let landLate: (rows: unknown[]) => void = () => {}
+      list().mockImplementationOnce(
+        () => new Promise((resolve) => {
+          landLate = resolve as (rows: unknown[]) => void
+        })
+      )
+      await user.type(box(), 'trea')
+      await pastTheWindow()
+
+      // "treasury" — resolves first, and is the current query.
+      list().mockResolvedValueOnce([treasurer])
+      await user.type(box(), 'sury')
+      await pastTheWindow()
+      await waitFor(() => expect(screen.getByText('treasurer@baras.gov')).toBeInTheDocument())
+
+      // The stale one lands afterwards carrying the wrong rows.
+      await act(async () => {
+        landLate([admin, colleague, treasurer])
+      })
+
+      expect(screen.getByText('treasurer@baras.gov')).toBeInTheDocument()
+      expect(screen.queryByText('clerk@baras.gov')).toBeNull()
+    })
+
+    it('AC4 — the rows stay put while a refetch is in flight', async () => {
+      list().mockResolvedValueOnce([admin, colleague, treasurer])
+      const user = setup()
+      renderPage(manage)
+      await screen.findByText('clerk@baras.gov')
+
+      list().mockImplementationOnce(() => new Promise(() => {})) // never settles
+      await user.type(box(), 'trea')
+      await pastTheWindow()
+
+      // The old rows are still on screen — no "Loading…" swap, no flicker.
+      expect(screen.getByText('clerk@baras.gov')).toBeInTheDocument()
+      expect(screen.queryByText('Loading…')).toBeNull()
+      expect(screen.getByRole('table')).toHaveAttribute('aria-busy', 'true')
+    })
+
+    it('AC5 — changing the office filter fires once, not alongside search', async () => {
+      list().mockResolvedValue([admin, colleague, treasurer])
+      const user = setup()
+      renderPage(manage)
+      await screen.findByText('clerk@baras.gov')
+      list().mockClear()
+
+      await user.selectOptions(screen.getByLabelText('Office'), 'treasury')
+      await pastTheWindow()
+
+      await waitFor(() => expect(list()).toHaveBeenCalledTimes(1))
+      expect(list()).toHaveBeenLastCalledWith(
+        expect.objectContaining({ office: 'treasury' }),
+        expect.anything()
+      )
+    })
+
+    it('rapid clear settles on the unfiltered list', async () => {
+      list().mockResolvedValue([admin, colleague, treasurer])
+      const user = setup()
+      renderPage(manage)
+      await screen.findByText('clerk@baras.gov')
+
+      await user.type(box(), 'treasury')
+      await user.clear(box())
+      await pastTheWindow()
+
+      // Typed and cleared inside one window: the query never changed, so
+      // nothing beyond the initial load was ever sent.
+      await waitFor(() => expect(list()).toHaveBeenCalledTimes(1))
+      expect(screen.getByText('clerk@baras.gov')).toBeInTheDocument()
     })
   })
 })
